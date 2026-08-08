@@ -68,6 +68,7 @@ export default function OrderDetailsPage() {
     if (status === "authenticated") {
       fetchOrderDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, router, params.id]);
 
   const fetchOrderDetails = async () => {

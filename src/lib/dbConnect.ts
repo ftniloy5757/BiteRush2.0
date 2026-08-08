@@ -1,3 +1,4 @@
+/* eslint-disable no-var */
 import mongoose from "mongoose";
 
 const MONGODB_URI = process.env.MONGODB_URI;
@@ -11,7 +12,7 @@ declare global {
   var mongooseCache: MongooseCache | undefined;
 }
 
-let cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
+const cached: MongooseCache = global.mongooseCache || { conn: null, promise: null };
 
 if (!global.mongooseCache) {
   global.mongooseCache = cached;
@@ -51,4 +52,3 @@ export const connectDB = async () => {
 };
 
 export default connectDB;
-

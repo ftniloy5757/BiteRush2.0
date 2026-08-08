@@ -104,7 +104,7 @@ export default function OrdersPage() {
 
       {orderItems.length === 0 ? (
         <div className="text-center py-10">
-          <p className="text-xl text-gray-600">You haven't ordered anything yet.</p>
+          <p className="text-xl text-gray-600">You haven&apos;t ordered anything yet.</p>
           <Link href="/menu" className="text-blue-500 hover:underline mt-4 block">
             Browse Menu
           </Link>
