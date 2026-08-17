@@ -2,47 +2,62 @@
 
 ![BiteRush 2.0 Banner](https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200&h=400&fit=crop)
 
-> **BiteRush 2.0** is an enterprise-grade, full-stack food delivery web application built with **Next.js 15 (App Router)**, **TypeScript**, **MongoDB/Mongoose**, and **NextAuth.js**. Featuring **three dedicated role portals** (Customer, Restaurant Manager, Delivery Rider), live 4-stage order tracking, dynamic ETA countdowns, direct 2-way in-app rider chat, customer cancellation, 5-star rating & reviews, a 24-hour post-delivery support window, personalized recommendation feed, and instant 1-click test logins.
+> **BiteRush 2.0** is an enterprise-grade, full-stack food delivery web application built with **Next.js 15 (App Router)**, **TypeScript**, **MongoDB/Mongoose**, and **NextAuth.js**. Featuring **three dedicated portals** (Customer, Restaurant Management, Delivery Rider), live 4-stage order tracking, dynamic ETA countdowns, direct 2-way in-app rider chat, customer cancellation, 5-star rating & reviews, a 24-hour post-delivery support window, and personalized recommendation feeds.
 
 ---
 
-## 🚀 Key Highlights & What's New in 2.0
+## 🌟 Key Modules & Features
 
-### 👥 1. Three Independent Role Modules
-* **Customer Portal (`/dashboard`, `/menu`, `/cart`, `/checkout`, `/orders`)**:
-  * Personalized feed powered by past order history & trending picks.
-  * Live 4-stage tracking stepper with dynamic ETA countdown.
-  * Direct 2-way in-app chat with assigned delivery riders.
-  * 1-click customer cancellation for pending orders.
-  * Post-delivery 5-star rating & text review submission.
-  * 24-hour post-delivery customer support ticket window.
-* **Restaurant Portal (`/restaurant`, `/restaurant/menu`, `/restaurant/orders`, `/restaurant/support`)**:
-  * Real-time metrics dashboard (menu count, pending, active, completed orders).
-  * Full menu CRUD with stock availability toggle (**In Stock** / **Out of Stock**) & image preview.
-  * Order lifecycle management: **Accept**, **Decline**, **Start Preparing**, **Mark Ready**.
-  * Dynamic **Rider Assignment & Dispatch** from active delivery riders.
-  * Dedicated Customer Support Resolver for order issue tickets.
-* **Rider Portal (`/rider`, `/rider/deliveries`)**:
-  * Active delivery queue with customer drop-off notes & gate instructions.
-  * Real-time in-app 2-way messaging with customers.
-  * 1-click **Mark Delivered** (auto-marks Cash on Delivery orders as paid).
-  * Completed delivery history, ratings received, and tips earnings tracker.
-
----
-
-## ⚡ 1-Click Pre-Configured Test Logins
-
-Test any role instantly from the `/sign-in` page with pre-seeded demo profiles:
-
-| Role | Email | Password | Primary Capabilities |
-| :--- | :--- | :--- | :--- |
-| 👤 **Customer** | `customer@biterush.com` | `Password123!` | Browse menu, checkout, live tracking, chat, rate & review |
-| 🍳 **Restaurant** | `restaurant@biterush.com` | `Password123!` | Manage menu, accept/decline orders, assign riders, resolve support |
-| 🛵 **Rider** | `rider@biterush.com` | `Password123!` | View active deliveries, chat with customer, mark delivered, tips |
+### 👤 1. Customer Experience & Ordering
+* **Interactive Menu & Food Discovery**:
+  * Browse hundreds of gourmet dishes across Burgers, Pizzas, Pastas, Desserts, and Drinks with live search & category filters.
+  * Publicly accessible menu for guests before creating an account.
+* **Smart Cart & Multi-Tier Checkout**:
+  * Delivery speed selection: **Saver (45-60 min)**, **Standard (30-40 min)**, **Priority (20-30 min)**.
+  * Payment options: **Cash on Delivery (COD)**, **bKash / Mobile Wallet**, **Card / Debit Card**.
+  * Optional **Delivery Instructions** passed directly to the kitchen and delivery rider.
+  * Rider tipping (৳15, ৳30, ৳50 or custom) & coupon discounts (`BITE10` for 10% off).
+* **Live 4-Stage Order Tracker (`/orders/[id]`)**:
+  * Real-time visual progress stepper: *Order Placed* ➡️ *Preparing in Kitchen* ➡️ *Out for Delivery* ➡️ *Delivered*.
+  * Dynamic ETA countdown timer calculated from order creation time and delivery priority.
+  * 1-click **Customer Cancellation** active while the order is pending confirmation.
+  * Direct 2-way in-app chat drawer with the assigned delivery rider.
+  * Post-delivery interactive 5-star rating and written review submission.
+  * 24-hour post-delivery customer support ticket submission window with status tracking.
+* **Personalized Customer Feed (`/dashboard`)**:
+  * Smart recommendation engine analyzing past order history to surface favorite categories and trending dishes.
+  * Active order banner for 1-click access to live tracking.
 
 ---
 
-## 📦 Complete Order Lifecycle & Tracking
+### 🍳 2. Restaurant Portal (`/restaurant`)
+* **Real-Time Operations Dashboard**:
+  * Live metrics on menu counts, incoming pending orders, active kitchen orders, and completed deliveries.
+* **Menu Management (`/restaurant/menu`)**:
+  * Full menu CRUD: Add, edit, and delete dishes with photo preview, pricing, category, and preparation time.
+  * 1-click stock availability toggle (**In Stock** / **Out of Stock**) to instantly reflect on customer menus.
+* **Order Fulfillment Pipeline (`/restaurant/orders`)**:
+  * Filter orders by status (*Pending*, *Accepted*, *Preparing*, *Ready for Pickup*, *Out for Delivery*, *Delivered*, *Declined*).
+  * **Accept** or **Decline** incoming customer orders.
+  * Advance kitchen workflow: **Start Preparing** ➡️ **Mark Ready for Pickup**.
+  * Dynamic **Rider Assignment**: Select from active delivery riders for immediate dispatch.
+* **Customer Support Resolver (`/restaurant/support`)**:
+  * Review and manage support tickets filed by customers for missing or damaged items.
+
+---
+
+### 🛵 3. Delivery Rider Portal (`/rider`)
+* **Rider Dashboard (`/rider`)**:
+  * Overview of active deliveries, completed deliveries, and tip earnings.
+* **Delivery Queue & Route Details (`/rider/deliveries`)**:
+  * View assigned deliveries with customer drop-off instructions, contact numbers, and delivery addresses.
+  * Direct 2-way in-app chat modal with the customer for turn-by-turn coordinate questions.
+  * 1-click **Mark Delivered** (automatically updates Cash on Delivery status to paid).
+  * Delivery history review with ratings received from customers.
+
+---
+
+## 📦 Complete Order Lifecycle Flow
 
 ```mermaid
 graph TD
@@ -58,25 +73,26 @@ graph TD
     H -->|Within 24 Hours| J[Support Ticket for Missing/Damaged Food]
 ```
 
-1. **Checkout & Payment**:
-   * Delivery options: **Saver (45-60 min)**, **Standard (30-40 min)**, **Priority (20-30 min)**.
-   * Payment options: **Cash on Delivery (COD)**, **bKash / Mobile Wallet**, **Card / Debit Card**.
-   * Optional **Delivery Instructions** passed directly to restaurant & rider.
-   * Rider tipping & coupon discounts (`BITE10` for 10% off).
-2. **Live Order Tracker (`/orders/[id]`)**:
-   * **4-Stage Stepper**: Visual progression of order fulfillment.
-   * **Dynamic Countdown**: Real-time remaining minutes calculated from delivery speed.
-   * **Live Rider Info**: Assigned rider name, vehicle type, and direct contact.
-   * **2-Way Chat**: Instant in-app messaging modal.
+---
+
+## 🧪 Pre-Configured Test Accounts
+
+For testing and demonstrating the three role portals, log in with the pre-seeded credentials:
+
+| Role | Email | Password | Primary Portal |
+| :--- | :--- | :--- | :--- |
+| 👤 **Customer** | `customer@biterush.com` | `Password123!` | `/dashboard`, `/menu`, `/orders` |
+| 🍳 **Restaurant** | `restaurant@biterush.com` | `Password123!` | `/restaurant`, `/restaurant/menu`, `/restaurant/orders` |
+| 🛵 **Rider** | `rider@biterush.com` | `Password123!` | `/rider`, `/rider/deliveries` |
 
 ---
 
 ## 🛠️ Technology Stack
 
-* **Framework**: [Next.js 15](https://nextjs.org/) (App Router, Turbopack, Server Actions & Route Handlers)
+* **Framework**: [Next.js 15](https://nextjs.org/) (App Router, Server Components & Route Handlers)
 * **Language**: [TypeScript](https://www.typescriptlang.org/) (Strict mode, end-to-end type safety)
 * **Database & ODM**: [MongoDB](https://www.mongodb.com/) + [Mongoose 8](https://mongoosejs.com/)
-* **Authentication**: [NextAuth.js](https://next-auth.js.org/) (JWT stateless strategy, role claims & middleware guards)
+* **Authentication**: [NextAuth.js](https://next-auth.js.org/) (JWT stateless strategy, role claims & middleware route guards)
 * **Styling & UI**: [Tailwind CSS 4](https://tailwindcss.com/), [Radix UI](https://www.radix-ui.com/), [Lucide Icons](https://lucide.dev/), Sonner Toasts
 * **Security & Utility**: [bcryptjs](https://www.npmjs.com/package/bcryptjs) (Salt hashing), [Zod](https://zod.dev/) validation
 
@@ -87,7 +103,7 @@ graph TD
 ```text
 ├── src/
 │   ├── app/
-│   │   ├── (auth)/             # Sign-in (w/ 1-click demo buttons), Sign-up, Password reset
+│   │   ├── (auth)/             # Sign-in, Sign-up, Password reset
 │   │   ├── (public)/           # Public landing page, menu, cart, checkout, payment, live order tracking
 │   │   ├── (restaurant)/       # Dedicated Restaurant Dashboard, Menu CRUD, Order Management, Support
 │   │   ├── (rider)/            # Dedicated Rider Dashboard, Active Deliveries, Chat, Delivery History
@@ -143,21 +159,19 @@ NEXTAUTH_SECRET=your_nextauth_secret_key
 NEXTAUTH_URL=http://localhost:3000
 ```
 
-### 4. Seed Demo Data & Start Development Server
+### 4. Run Development Server
 ```bash
 npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
-Navigate to `/sign-in` and click any of the **1-Click Demo Login** buttons to automatically seed the database and explore all role features!
 
 ---
 
-## 🧪 Build & Typecheck Verification
+## 🧪 Build & Verification
 
-Run the full TypeScript verification and production build:
 ```bash
-# Check TypeScript compilation
+# Verify TypeScript types
 npx tsc --noEmit
 
 # Run Next.js production build

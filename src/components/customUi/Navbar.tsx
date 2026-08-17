@@ -85,8 +85,18 @@ export default function Navbar() {
 
         {/* Role-Specific Navigation Links */}
         <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
-          {/* Customer / Public links */}
-          {userRole === "customer" && (
+          {/* Public links (Non-logged in) */}
+          {!session && (
+            <Link
+              href="/menu"
+              className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
+            >
+              Menu
+            </Link>
+          )}
+
+          {/* Customer links (Logged in) */}
+          {session && userRole === "customer" && (
             <>
               <Link
                 href="/menu"
@@ -101,22 +111,18 @@ export default function Navbar() {
                 <CartIcon className="h-4 w-4" />
                 Cart
               </Link>
-              {session && (
-                <>
-                  <Link
-                    href="/dashboard"
-                    className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
-                  >
-                    Feed
-                  </Link>
-                  <Link
-                    href="/orders"
-                    className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
-                  >
-                    My Orders
-                  </Link>
-                </>
-              )}
+              <Link
+                href="/dashboard"
+                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
+              >
+                Feed
+              </Link>
+              <Link
+                href="/orders"
+                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
+              >
+                My Orders
+              </Link>
             </>
           )}
 

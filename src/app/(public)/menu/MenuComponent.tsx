@@ -1,8 +1,8 @@
-// /app/menu/MenuComponent.tsx
 "use client";
 
 import { useState, useEffect, useCallback, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import { Search, ShoppingBag, Star, Clock, Filter, Sparkles, Plus, Check } from "lucide-react";
@@ -22,6 +22,7 @@ interface Product {
 }
 
 function MenuList() {
+  const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>([]);
   const [allProducts, setAllProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);

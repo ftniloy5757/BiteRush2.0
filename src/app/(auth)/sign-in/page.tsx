@@ -1,267 +1,201 @@
 "use client";
-import { signIn } from "next-auth/react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Utensils, Mail, Lock, ArrowRight, ShoppingBag, ChefHat, Bike, User } from "lucide-react";
+
+import { signIn, useSession } from "next-auth/react";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Utensils, Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
 
-const demoAccounts = [
-  {
-    label: "Customer",
-    email: "customer@biterush.com",
-    password: "Password123!",
-    icon: User,
-    color: "from-blue-500 to-blue-600",
-    hoverColor: "hover:from-blue-600 hover:to-blue-700",
-    description: "Browse menu, place orders & track delivery",
-    emoji: "👤",
-  },
-  {
-    label: "Restaurant",
-    email: "restaurant@biterush.com",
-    password: "Password123!",
-    icon: ChefHat,
-    color: "from-emerald-500 to-emerald-600",
-    hoverColor: "hover:from-emerald-600 hover:to-emerald-700",
-    description: "Manage menu, accept orders & assign riders",
-    emoji: "🍳",
-  },
-  {
-    label: "Rider",
-    email: "rider@biterush.com",
-    password: "Password123!",
-    icon: Bike,
-    color: "from-violet-500 to-violet-600",
-    hoverColor: "hover:from-violet-600 hover:to-violet-700",
-    description: "View deliveries, update status & chat",
-    emoji: "🛵",
-  },
-];
-
-export default function SignIn() {
+function SignInForm() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
-  const [loadingDemo, setLoadingDemo] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get("redirect") || "/dashboard";
+
+  // Pre-seed demo data on background to ensure database is always ready
+  useEffect(() => {
+    fetch("/api/seed", { method: "POST" }).catch(() => {});
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     setError("");
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      identifier,
-      password,
-    });
-
-    setIsSubmitting(false);
-
-    if (result?.error) {
-      setError(result.error);
-    } else {
-      router.push("/dashboard");
-    }
-  };
-
-  const handleDemoLogin = async (email: string, pwd: string, label: string) => {
-    setLoadingDemo(label);
-    setError("");
-
-    // First seed demo data
     try {
-      await fetch("/api/seed", { method: "POST" });
-    } catch {
-      // Seed may fail if already seeded, that's ok
-    }
+      const result = await signIn("credentials", {
+        redirect: false,
+        identifier: identifier.trim(),
+        password: password,
+      });
 
-    const result = await signIn("credentials", {
-      redirect: false,
-      identifier: email,
-      password: pwd,
-    });
-
-    setLoadingDemo(null);
-
-    if (result?.error) {
-      setError(`Demo login failed: ${result.error}. Please try seeding data first.`);
-    } else {
-      // Redirect based on role
-      if (email.includes("restaurant")) {
-        router.push("/restaurant");
-      } else if (email.includes("rider")) {
-        router.push("/rider");
+      if (result?.error) {
+        setError(result.error);
+        setIsSubmitting(false);
       } else {
-        router.push("/dashboard");
+        // Fetch session to determine role-based redirect
+        const sessionRes = await fetch("/api/auth/session");
+        const sessionData = await sessionRes.json();
+        const role = sessionData?.user?.role;
+
+        if (role === "restaurant") {
+          router.push("/restaurant");
+        } else if (role === "rider") {
+          router.push("/rider");
+        } else {
+          router.push(redirectUrl);
+        }
       }
+    } catch (err) {
+      setError("An unexpected error occurred during sign in. Please try again.");
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center p-4">
-      {/* Animated food icons background */}
-      {[...Array(5)].map((_, i) => (
-        <ShoppingBag
-          key={i}
-          className="text-orange-300 opacity-20 absolute animate-float"
-        />
-      ))}
-
+    <div className="min-h-[85vh] flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6">
-        {/* Quick Demo Login Section */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 border border-orange-200 dark:border-gray-800">
-          <div className="text-center mb-4">
-            <span className="text-sm font-medium text-orange-600 dark:text-orange-400 bg-orange-100 dark:bg-orange-900/30 px-3 py-1 rounded-full">
-              ⚡ Quick Demo Access
-            </span>
+        <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-8 border border-gray-100 dark:border-gray-800">
+          {/* Logo & Header */}
+          <div className="text-center mb-8 space-y-2">
+            <div className="w-14 h-14 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white mx-auto shadow-md shadow-orange-500/20">
+              <Utensils className="w-7 h-7" />
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
+              Welcome to BiteRush
+            </h1>
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Sign in to order delicious food and track your deliveries
+            </p>
           </div>
-          <p className="text-center text-sm text-gray-500 dark:text-gray-400 mb-4">
-            Try BiteRush 2.0 instantly — pick a role below
-          </p>
-          <div className="grid grid-cols-3 gap-3">
-            {demoAccounts.map((account) => (
-              <button
-                key={account.label}
-                onClick={() => handleDemoLogin(account.email, account.password, account.label)}
-                disabled={loadingDemo !== null}
-                className={`relative bg-gradient-to-r ${account.color} ${account.hoverColor} text-white rounded-xl p-3 transition-all duration-200 transform hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed shadow-lg`}
-              >
-                {loadingDemo === account.label ? (
-                  <div className="flex flex-col items-center gap-1">
-                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs">Loading...</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center gap-1">
-                    <span className="text-2xl">{account.emoji}</span>
-                    <span className="text-xs font-bold">{account.label}</span>
-                  </div>
-                )}
-              </button>
-            ))}
-          </div>
-          <div className="mt-3 grid grid-cols-3 gap-3">
-            {demoAccounts.map((account) => (
-              <p key={account.label} className="text-[10px] text-gray-400 dark:text-gray-500 text-center leading-tight">
-                {account.description}
-              </p>
-            ))}
-          </div>
-        </div>
 
-        {/* Divider */}
-        <div className="relative">
-          <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-gray-300 dark:border-gray-700" />
-          </div>
-          <div className="relative flex justify-center text-sm">
-            <span className="px-4 bg-gradient-to-br from-orange-50 to-amber-100 dark:from-gray-950 dark:to-gray-900 text-gray-500 dark:text-gray-400">
-              or sign in with your account
-            </span>
-          </div>
-        </div>
-
-        {/* Sign In Form */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8">
-          <div className="flex items-center justify-center mb-6">
-            <Utensils className="text-orange-600 w-12 h-12" />
-            <h2 className="text-3xl font-bold text-gray-800 dark:text-gray-100 ml-2">
-              BiteRush
-            </h2>
-          </div>
-          <h3 className="text-xl font-semibold text-center mb-6 text-gray-700 dark:text-gray-300">
-            Welcome back, food lover!
-          </h3>
           {error && (
-            <Alert variant="destructive" className="mb-4">
+            <Alert variant="destructive" className="mb-5 rounded-2xl text-xs">
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label
                 htmlFor="identifier"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
+                className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5"
               >
                 Email or Contact Number
               </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Mail className="h-5 w-5 text-gray-400" />
+              <div className="relative rounded-2xl">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Mail className="h-4 w-4 text-gray-400" />
                 </div>
                 <Input
                   id="identifier"
                   name="identifier"
                   type="text"
                   required
-                  className="pl-10 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500"
-                  placeholder="you@example.com or phone number"
+                  className="pl-10 pr-4 py-2.5 h-11 text-xs rounded-2xl border-gray-200 dark:border-gray-800 dark:bg-gray-800/50 focus:border-orange-500 focus:ring-orange-500"
+                  placeholder="name@example.com or phone"
                   value={identifier}
                   onChange={(e) => setIdentifier(e.target.value)}
                 />
               </div>
             </div>
+
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300"
-              >
-                Password
-              </label>
-              <div className="mt-1 relative rounded-md shadow-sm">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                  <Lock className="h-5 w-5 text-gray-400" />
+              <div className="flex items-center justify-between mb-1.5">
+                <label
+                  htmlFor="password"
+                  className="block text-xs font-bold text-gray-700 dark:text-gray-300"
+                >
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-orange-600 hover:text-orange-500 transition-colors"
+                >
+                  Forgot Password?
+                </Link>
+              </div>
+              <div className="relative rounded-2xl">
+                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
+                  <Lock className="h-4 w-4 text-gray-400" />
                 </div>
                 <Input
                   id="password"
                   name="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
-                  className="pl-10 block w-full border-gray-300 focus:border-orange-500 focus:ring-orange-500"
-                  placeholder="Enter your password"
+                  className="pl-10 pr-10 py-2.5 h-11 text-xs rounded-2xl border-gray-200 dark:border-gray-800 dark:bg-gray-800/50 focus:border-orange-500 focus:ring-orange-500"
+                  placeholder="••••••••••••"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 pr-3.5 flex items-center text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
             </div>
+
             <Button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white"
+              disabled={isSubmitting || !identifier || !password}
+              className="w-full h-11 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold rounded-2xl shadow-md shadow-orange-500/20 text-xs transition-all flex items-center justify-center gap-1.5 disabled:opacity-50 mt-2"
             >
-              {isSubmitting ? "Signing in..." : "Sign In"} <ArrowRight className="ml-2 h-4 w-4" />
+              {isSubmitting ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Signing In...</span>
+                </>
+              ) : (
+                <>
+                  <span>Sign In</span>
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
             </Button>
           </form>
-          <div className="mt-4 flex justify-between items-center">
-            <Link
-              href="/forgot-password"
-              className="text-sm text-orange-600 hover:text-orange-500"
-            >
-              Forgot Password?
-            </Link>
-          </div>
-          <p className="mt-4 text-left text-sm text-gray-600 dark:text-gray-400">
-            New to BiteRush?{" "}
-            <Link
-              href="/sign-up"
-              className="font-medium text-orange-600 hover:text-orange-500"
-            >
-              Create an account and start ordering
-            </Link>
-          </p>
-          <div className="mt-6 border-t border-gray-200 dark:border-gray-800 pt-4">
-            <p className="text-xs text-center text-gray-500 dark:text-gray-400">
-              &quot;Join thousands of food lovers enjoying delicious meals
-              delivered right to their doorstep.&quot;
+
+          <div className="mt-6 pt-5 border-t border-gray-100 dark:border-gray-800 text-center">
+            <p className="text-xs text-gray-600 dark:text-gray-400">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/sign-up"
+                className="font-bold text-orange-600 hover:text-orange-500 transition-colors"
+              >
+                Sign up now
+              </Link>
             </p>
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SignInPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-[80vh] flex items-center justify-center">
+          <div className="w-8 h-8 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
+        </div>
+      }
+    >
+      <SignInForm />
+    </Suspense>
   );
 }

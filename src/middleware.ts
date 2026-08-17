@@ -6,20 +6,26 @@ export async function middleware(request: NextRequest) {
   const token = await getToken({ req: request });
   const url = request.nextUrl;
 
-  // If the user is not logged in and tries to access protected routes
+  // Protected paths that require authentication
+  const isProtectedPath =
+    url.pathname.startsWith("/cart") ||
+    url.pathname.startsWith("/checkout") ||
+    url.pathname.startsWith("/payment") ||
+    url.pathname.startsWith("/orders") ||
+    url.pathname.startsWith("/profile") ||
+    url.pathname.startsWith("/dashboard") ||
+    url.pathname.startsWith("/restaurant") ||
+    url.pathname.startsWith("/rider");
+
+  // If unauthenticated and accessing a protected route -> Redirect to sign-in
   if (!token) {
-    // Protect all authenticated routes
-    if (
-      url.pathname.startsWith("/profile") ||
-      url.pathname.startsWith("/dashboard") ||
-      url.pathname.startsWith("/restaurant") ||
-      url.pathname.startsWith("/rider")
-    ) {
-      return NextResponse.redirect(new URL("/sign-in", request.url));
+    if (isProtectedPath) {
+      const signInUrl = new URL("/sign-in", request.url);
+      signInUrl.searchParams.set("redirect", url.pathname);
+      return NextResponse.redirect(signInUrl);
     }
   } else {
-    // User is logged in
-    // Redirect authenticated users away from auth pages
+    // Authenticated user trying to access auth pages -> Redirect to appropriate dashboard
     if (
       url.pathname.startsWith("/sign-in") ||
       url.pathname.startsWith("/sign-up") ||
@@ -48,7 +54,6 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Otherwise allow the request
   return NextResponse.next();
 }
 
@@ -58,6 +63,10 @@ export const config = {
     "/sign-in",
     "/sign-up",
     "/verify/:path*",
+    "/cart/:path*",
+    "/checkout/:path*",
+    "/payment/:path*",
+    "/orders/:path*",
     "/profile/:path*",
     "/dashboard/:path*",
     "/restaurant/:path*",
