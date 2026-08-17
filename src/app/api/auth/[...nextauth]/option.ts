@@ -24,12 +24,23 @@ export const authOptions: NextAuthOptions = {
           await connectDB();
 
           // Find user by email or contact number
-          const user = await User.findOne({
+          let user = await User.findOne({
             $or: [
               { email: credentials.identifier },
               { contactNumber: credentials.identifier },
             ],
           });
+
+          if (!user) {
+            const { seedDemoData } = await import("@/lib/seedDemoUsers");
+            await seedDemoData();
+            user = await User.findOne({
+              $or: [
+                { email: credentials.identifier },
+                { contactNumber: credentials.identifier },
+              ],
+            });
+          }
 
           if (!user) {
             throw new Error("User not found");

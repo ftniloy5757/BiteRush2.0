@@ -28,7 +28,13 @@ export async function GET(req: NextRequest) {
     }
     if (minRating) filter.rating = { $gte: parseFloat(minRating) };
 
-    const products = await Product.find(filter).sort({ createdAt: -1 });
+    let products = await Product.find(filter).sort({ createdAt: -1 });
+
+    if (products.length === 0 && (!category || category === "all")) {
+      const { seedDemoData } = await import("@/lib/seedDemoUsers");
+      await seedDemoData();
+      products = await Product.find(filter).sort({ createdAt: -1 });
+    }
 
     return NextResponse.json(products, { status: 200 });
   } catch (error) {

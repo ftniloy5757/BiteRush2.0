@@ -13,7 +13,7 @@ const demoUsers = [
     email: "customer@biterush.com",
     contactNumber: "+8801700000001",
     role: "customer" as const,
-    bio: "Love trying new food! BiteRush is my go-to delivery app.",
+    bio: "Food enthusiast & regular BiteRush customer.",
     isEmailVerified: true,
     isPhoneVerified: true,
     status: "Online" as const,
@@ -25,7 +25,7 @@ const demoUsers = [
     email: "restaurant@biterush.com",
     contactNumber: "+8801700000002",
     role: "restaurant" as const,
-    bio: "Official BiteRush Kitchen — Serving the best burgers, pizzas & more!",
+    bio: "Official BiteRush Gourmet Kitchen.",
     restaurantName: "BiteRush Kitchen",
     restaurantAddress: "House 42, Road 11, Dhanmondi, Dhaka 1205",
     isEmailVerified: true,
@@ -39,7 +39,7 @@ const demoUsers = [
     email: "rider@biterush.com",
     contactNumber: "+8801700000003",
     role: "rider" as const,
-    bio: "Fast & reliable delivery rider. I know every shortcut in Dhaka!",
+    bio: "Top rated express delivery rider.",
     vehicleType: "Motorcycle",
     activeStatus: true,
     isEmailVerified: true,
@@ -49,259 +49,144 @@ const demoUsers = [
   },
 ];
 
+// Exactly 6 ready-made testing menu items covering all key categories
 const demoProducts = [
-  // Burgers
   {
-    name: "Classic Beef Burger",
-    description: "Juicy hand-pressed beef patty with fresh lettuce, tomato, pickles, and our signature sauce in a toasted sesame bun.",
+    name: "Classic Flame-Grilled Beef Burger",
+    description: "Juicy hand-pressed prime beef patty with crisp lettuce, ripe tomatoes, cheddar cheese, and signature smoky relish in a toasted brioche bun.",
     price: 350,
     category: "burger",
-    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=400&fit=crop",
-    rating: 4.5,
-    numReviews: 128,
+    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+    rating: 4.8,
+    numReviews: 142,
     inStock: true,
     isAvailable: true,
     featured: true,
     prepTime: "12-15 min",
   },
   {
-    name: "Spicy Chicken Burger",
-    description: "Crispy fried chicken fillet with spicy mayo, jalapeños, coleslaw, and melted pepper jack cheese.",
+    name: "Spicy Crispy Zinger Chicken Burger",
+    description: "Golden fried crunchy chicken breast fillet tossed in spicy seasoning, topped with jalapeño slaw and melted pepper jack cheese.",
     price: 320,
     category: "burger",
-    image: "https://images.unsplash.com/photo-1525164286253-04e68b9d94c6?w=500&h=400&fit=crop",
-    rating: 4.3,
-    numReviews: 95,
+    image: "https://images.unsplash.com/photo-1525164286253-04e68b9d94c6?w=600&h=450&fit=crop",
+    rating: 4.7,
+    numReviews: 98,
     inStock: true,
     isAvailable: true,
     featured: false,
-    prepTime: "15-18 min",
+    prepTime: "15 min",
   },
   {
-    name: "Double Smash Burger",
-    description: "Two thin smashed beef patties with American cheese, caramelized onions, and special smash sauce.",
-    price: 450,
-    category: "burger",
-    image: "https://images.unsplash.com/photo-1553979459-d2229ba7433b?w=500&h=400&fit=crop",
-    rating: 4.8,
-    numReviews: 203,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "10-12 min",
-  },
-  // Pizzas
-  {
-    name: "Margherita Pizza",
-    description: "Classic Italian pizza with San Marzano tomato sauce, fresh mozzarella, basil, and extra virgin olive oil.",
-    price: 550,
-    category: "pizza",
-    image: "https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=500&h=400&fit=crop",
-    rating: 4.6,
-    numReviews: 167,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "18-22 min",
-  },
-  {
-    name: "Pepperoni Supreme",
-    description: "Loaded with pepperoni, mozzarella, parmesan, and oregano on a crispy thin crust.",
+    name: "Artisanal Pepperoni Passion Pizza",
+    description: "Stone-baked Italian sourdough crust loaded with premium beef pepperoni, roasted garlic tomato sauce, and molten mozzarella.",
     price: 650,
     category: "pizza",
-    image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=500&h=400&fit=crop",
-    rating: 4.7,
-    numReviews: 189,
+    image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
+    rating: 4.9,
+    numReviews: 215,
     inStock: true,
     isAvailable: true,
     featured: true,
     prepTime: "20-25 min",
   },
   {
-    name: "BBQ Chicken Pizza",
-    description: "Smoky BBQ sauce base with grilled chicken, red onions, cilantro, and gouda cheese.",
-    price: 620,
-    category: "pizza",
-    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=500&h=400&fit=crop",
-    rating: 4.4,
-    numReviews: 134,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "20-25 min",
-  },
-  // Pasta
-  {
-    name: "Creamy Alfredo Pasta",
-    description: "Fettuccine tossed in a rich and creamy parmesan alfredo sauce with grilled chicken and broccoli.",
-    price: 420,
+    name: "Creamy Truffle Mushroom Alfredo Pasta",
+    description: "Fettuccine pasta tossed in velvety parmesan alfredo sauce infused with black truffle oil and pan-sautéed cremini mushrooms.",
+    price: 450,
     category: "pasta",
-    image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=500&h=400&fit=crop",
-    rating: 4.5,
-    numReviews: 112,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "15-20 min",
-  },
-  {
-    name: "Spicy Arrabbiata Penne",
-    description: "Penne pasta in a fiery tomato sauce with garlic, red chili flakes, and fresh parsley.",
-    price: 380,
-    category: "pasta",
-    image: "https://images.unsplash.com/photo-1563379926898-05f4575a45d8?w=500&h=400&fit=crop",
-    rating: 4.2,
-    numReviews: 78,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "12-15 min",
-  },
-  {
-    name: "Carbonara Spaghetti",
-    description: "Traditional Roman carbonara with crispy pancetta, egg yolk, pecorino romano, and black pepper.",
-    price: 480,
-    category: "pasta",
-    image: "https://images.unsplash.com/photo-1612874742237-6526221588e3?w=500&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
     rating: 4.6,
-    numReviews: 145,
+    numReviews: 87,
     inStock: true,
     isAvailable: true,
     featured: true,
     prepTime: "15-18 min",
   },
-  // Desserts
   {
-    name: "Chocolate Lava Cake",
-    description: "Warm chocolate cake with a gooey molten center, served with vanilla ice cream and chocolate drizzle.",
-    price: 280,
+    name: "Warm Belgian Chocolate Lava Cake",
+    description: "Decadent dark chocolate cake with a rich molten center, served warm with vanilla cream and chocolate shavings.",
+    price: 260,
     category: "dessert",
-    image: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=500&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
     rating: 4.9,
-    numReviews: 234,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "10-12 min",
-  },
-  {
-    name: "New York Cheesecake",
-    description: "Classic creamy cheesecake on a buttery graham cracker crust, topped with fresh strawberry compote.",
-    price: 320,
-    category: "dessert",
-    image: "https://images.unsplash.com/photo-1567171466295-4afa63d45416?w=500&h=400&fit=crop",
-    rating: 4.7,
-    numReviews: 156,
+    numReviews: 180,
     inStock: true,
     isAvailable: true,
     featured: false,
-    prepTime: "5 min",
+    prepTime: "8-10 min",
   },
   {
-    name: "Tiramisu",
-    description: "Italian layered dessert with espresso-soaked ladyfingers, mascarpone cream, and cocoa dusting.",
-    price: 350,
-    category: "dessert",
-    image: "https://images.unsplash.com/photo-1571877227200-a0d98ea607e9?w=500&h=400&fit=crop",
-    rating: 4.8,
-    numReviews: 178,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "5 min",
-  },
-  // Drinks
-  {
-    name: "Mango Lassi",
-    description: "Refreshing blend of ripe Alphonso mangoes, creamy yogurt, and a hint of cardamom.",
-    price: 150,
+    name: "Iced Caramel Macchiato Cooler",
+    description: "Rich espresso layered over fresh chilled milk and vanilla, topped with buttery caramel drizzle and crushed ice.",
+    price: 180,
     category: "drink",
-    image: "https://images.unsplash.com/photo-1527661591475-527312dd65f5?w=500&h=400&fit=crop",
-    rating: 4.4,
-    numReviews: 89,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "3-5 min",
-  },
-  {
-    name: "Iced Caramel Latte",
-    description: "Double espresso with cold milk, caramel syrup, and a swirl of whipped cream over ice.",
-    price: 220,
-    category: "drink",
-    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=500&h=400&fit=crop",
+    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
     rating: 4.5,
-    numReviews: 112,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "3-5 min",
-  },
-  {
-    name: "Fresh Lime Soda",
-    description: "Sparkling soda water with fresh lime juice, mint leaves, and a touch of sugar.",
-    price: 100,
-    category: "drink",
-    image: "https://images.unsplash.com/photo-1513558161293-cdaf765ed2fd?w=500&h=400&fit=crop",
-    rating: 4.1,
-    numReviews: 67,
+    numReviews: 110,
     inStock: true,
     isAvailable: true,
     featured: false,
-    prepTime: "2-3 min",
-  },
-  {
-    name: "Chocolate Milkshake",
-    description: "Thick and creamy chocolate milkshake blended with premium chocolate ice cream and whole milk.",
-    price: 200,
-    category: "drink",
-    image: "https://images.unsplash.com/photo-1572490122747-3968b75cc699?w=500&h=400&fit=crop",
-    rating: 4.6,
-    numReviews: 134,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "3-5 min",
+    prepTime: "5 min",
   },
 ];
 
 export async function seedDemoData() {
   await connectDB();
 
+  // 1. Seed or Update Demo Users
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
   const createdUsers: Record<string, any> = {};
 
-  // Seed users
   for (const userData of demoUsers) {
-    const existing = await User.findOne({ email: userData.email });
-    if (existing) {
-      createdUsers[userData.role] = existing;
-      continue;
+    let user = await User.findOne({ email: userData.email });
+    if (!user) {
+      user = await User.create({
+        ...userData,
+        passwordHash,
+      });
+    } else {
+      user.firstName = userData.firstName;
+      user.lastName = userData.lastName;
+      user.role = userData.role;
+      user.passwordHash = passwordHash;
+      user.isEmailVerified = true;
+      user.isPhoneVerified = true;
+      if (userData.restaurantName) user.restaurantName = userData.restaurantName;
+      if (userData.restaurantAddress) user.restaurantAddress = userData.restaurantAddress;
+      if (userData.vehicleType) user.vehicleType = userData.vehicleType;
+      if (userData.activeStatus !== undefined) user.activeStatus = userData.activeStatus;
+      await user.save();
     }
-    const user = await User.create({ ...userData, passwordHash });
     createdUsers[userData.role] = user;
   }
 
-  // Seed products (clear and re-create for consistency)
-  const existingProducts = await Product.countDocuments();
-  let products;
-  if (existingProducts === 0) {
+  // 2. Seed or Sync Products (Clean 6-item menu)
+  const existingProductsCount = await Product.countDocuments();
+  let products = [];
+
+  if (existingProductsCount === 0 || existingProductsCount > 10) {
+    // Clean and reset to the 6 curated readymade products
+    await Product.deleteMany({});
     products = await Product.insertMany(demoProducts);
   } else {
-    products = await Product.find();
+    products = await Product.find({});
   }
 
-  // Seed sample orders if none exist
-  const existingOrders = await Order.countDocuments();
-  if (existingOrders === 0 && products.length > 0) {
-    const customer = createdUsers["customer"];
-    const rider = createdUsers["rider"];
+  // 3. Seed Realistic Multi-State Orders for all test profiles
+  const customer = createdUsers["customer"];
+  const restaurant = createdUsers["restaurant"];
+  const rider = createdUsers["rider"];
 
-    // Order 1: Delivered with rating
+  const existingOrders = await Order.countDocuments({ user: customer._id });
+
+  if (existingOrders < 4) {
+    // Remove existing seed orders and recreate realistic lifecycle order set
+    await Order.deleteMany({ user: customer._id });
+
     const now = new Date();
-    const twoHoursAgo = new Date(now.getTime() - 2 * 60 * 60 * 1000);
-    const oneHourAgo = new Date(now.getTime() - 1 * 60 * 60 * 1000);
 
+    // Order 1: Out for Delivery (Live Active delivery with Assigned Rider & 2-Way Chat)
     await Order.create({
       user: customer._id,
       orderItems: [
@@ -313,149 +198,53 @@ export async function seedDemoData() {
           price: products[0].price,
         },
         {
-          product: products[9]._id,
-          name: products[9].name,
-          quantity: 1,
-          image: products[9].image,
-          price: products[9].price,
+          product: products[5]._id,
+          name: products[5].name,
+          quantity: 2,
+          image: products[5].image,
+          price: products[5].price,
         },
       ],
       shippingAddress: {
-        address: "House 15, Road 5, Gulshan",
+        address: "House 15, Road 5, Block C",
         city: "Dhaka",
         postalCode: "1212",
         area: "Gulshan",
-        details: "Gate code: 4521",
+        details: "4th Floor, Apt 4B. Near Gulshan Lake Park",
       },
       paymentMethod: "Bkash",
-      deliveryMethod: "Standard",
-      deliveryInstructions: "Please ring the bell twice",
-      itemsPrice: 980,
+      deliveryMethod: "Priority",
+      deliveryInstructions: "Please call when you reach the security gate.",
+      itemsPrice: 1060,
       taxPrice: 0,
-      shippingPrice: 45,
-      tipAmount: 20,
-      totalPrice: 1045,
+      shippingPrice: 60,
+      tipAmount: 30,
+      totalPrice: 1150,
       isPaid: true,
-      paidAt: twoHoursAgo,
-      isDelivered: true,
-      deliveredAt: oneHourAgo,
-      status: "delivered",
+      paidAt: new Date(now.getTime() - 25 * 60 * 1000),
+      isDelivered: false,
+      status: "out_for_delivery",
       rider: rider._id,
-      rating: 5,
-      review: "Amazing burgers and the lava cake was heavenly! Rider was super fast.",
-      ratedAt: oneHourAgo,
-      estimatedDeliveryMinutes: 35,
-      acceptedAt: new Date(twoHoursAgo.getTime() + 5 * 60 * 1000),
-      dispatchedAt: new Date(twoHoursAgo.getTime() + 25 * 60 * 1000),
+      estimatedDeliveryMinutes: 20,
+      acceptedAt: new Date(now.getTime() - 22 * 60 * 1000),
+      dispatchedAt: new Date(now.getTime() - 8 * 60 * 1000),
       messages: [
-        {
-          senderRole: "rider",
-          senderName: "Rahim Rider",
-          text: "Hi! I've picked up your order and heading to you now.",
-          createdAt: new Date(twoHoursAgo.getTime() + 26 * 60 * 1000),
-        },
         {
           senderRole: "customer",
           senderName: "Alex Customer",
-          text: "Great, thanks! I'm at the main gate.",
-          createdAt: new Date(twoHoursAgo.getTime() + 28 * 60 * 1000),
+          text: "Hi Rahim, could you please ensure the drinks are packed upright?",
+          createdAt: new Date(now.getTime() - 7 * 60 * 1000),
         },
         {
           senderRole: "rider",
           senderName: "Rahim Rider",
-          text: "Almost there, 2 minutes!",
-          createdAt: new Date(twoHoursAgo.getTime() + 32 * 60 * 1000),
+          text: "Hello! Yes, drinks are safely placed in my insulated thermal bag. Approaching your street now! 🛵",
+          createdAt: new Date(now.getTime() - 5 * 60 * 1000),
         },
       ],
-      createdAt: twoHoursAgo,
     });
 
-    // Order 2: Currently being prepared
-    await Order.create({
-      user: customer._id,
-      orderItems: [
-        {
-          product: products[3]._id,
-          name: products[3].name,
-          quantity: 1,
-          image: products[3].image,
-          price: products[3].price,
-        },
-        {
-          product: products[13]._id,
-          name: products[13].name,
-          quantity: 2,
-          image: products[13].image,
-          price: products[13].price,
-        },
-      ],
-      shippingAddress: {
-        address: "House 15, Road 5, Gulshan",
-        city: "Dhaka",
-        postalCode: "1212",
-        area: "Gulshan",
-      },
-      paymentMethod: "Cash on Delivery",
-      deliveryMethod: "Priority",
-      deliveryInstructions: "Leave at reception desk, apartment 5B",
-      itemsPrice: 990,
-      taxPrice: 0,
-      shippingPrice: 60,
-      tipAmount: 0,
-      totalPrice: 1050,
-      isPaid: false,
-      isDelivered: false,
-      status: "preparing",
-      estimatedDeliveryMinutes: 25,
-      acceptedAt: new Date(now.getTime() - 10 * 60 * 1000),
-    });
-
-    // Order 3: Pending (new order)
-    await Order.create({
-      user: customer._id,
-      orderItems: [
-        {
-          product: products[4]._id,
-          name: products[4].name,
-          quantity: 1,
-          image: products[4].image,
-          price: products[4].price,
-        },
-        {
-          product: products[8]._id,
-          name: products[8].name,
-          quantity: 1,
-          image: products[8].image,
-          price: products[8].price,
-        },
-        {
-          product: products[12]._id,
-          name: products[12].name,
-          quantity: 1,
-          image: products[12].image,
-          price: products[12].price,
-        },
-      ],
-      shippingAddress: {
-        address: "House 15, Road 5, Gulshan",
-        city: "Dhaka",
-        postalCode: "1212",
-        area: "Gulshan",
-      },
-      paymentMethod: "Card or Debit Card",
-      deliveryMethod: "Standard",
-      itemsPrice: 1280,
-      taxPrice: 0,
-      shippingPrice: 45,
-      tipAmount: 30,
-      totalPrice: 1355,
-      isPaid: true,
-      paidAt: new Date(),
-      isDelivered: false,
-      status: "pending",
-    });
-
-    // Order 4: Out for delivery (assigned to rider)
+    // Order 2: Preparing in Kitchen (Accepted by restaurant, active cooking)
     await Order.create({
       user: customer._id,
       orderItems: [
@@ -467,44 +256,193 @@ export async function seedDemoData() {
           price: products[2].price,
         },
         {
-          product: products[15]._id,
-          name: products[15].name,
+          product: products[3]._id,
+          name: products[3].name,
           quantity: 1,
-          image: products[15].image,
-          price: products[15].price,
+          image: products[3].image,
+          price: products[3].price,
         },
       ],
       shippingAddress: {
-        address: "House 15, Road 5, Gulshan",
+        address: "Apartment 7A, Green Tower",
+        city: "Dhaka",
+        postalCode: "1205",
+        area: "Dhanmondi",
+        details: "Opposite to City College",
+      },
+      paymentMethod: "Cash on Delivery",
+      deliveryMethod: "Standard",
+      deliveryInstructions: "Leave with security if I don't answer right away.",
+      itemsPrice: 1100,
+      taxPrice: 0,
+      shippingPrice: 45,
+      tipAmount: 0,
+      totalPrice: 1145,
+      isPaid: false,
+      isDelivered: false,
+      status: "preparing",
+      estimatedDeliveryMinutes: 30,
+      acceptedAt: new Date(now.getTime() - 12 * 60 * 1000),
+    });
+
+    // Order 3: Pending Confirmation (Incoming order for restaurant to Accept/Decline, or customer Cancel)
+    await Order.create({
+      user: customer._id,
+      orderItems: [
+        {
+          product: products[1]._id,
+          name: products[1].name,
+          quantity: 1,
+          image: products[1].image,
+          price: products[1].price,
+        },
+        {
+          product: products[4]._id,
+          name: products[4].name,
+          quantity: 1,
+          image: products[4].image,
+          price: products[4].price,
+        },
+      ],
+      shippingAddress: {
+        address: "House 28, Road 4",
+        city: "Dhaka",
+        postalCode: "1213",
+        area: "Banani",
+      },
+      paymentMethod: "Card or Debit Card",
+      deliveryMethod: "Standard",
+      itemsPrice: 580,
+      taxPrice: 0,
+      shippingPrice: 45,
+      tipAmount: 20,
+      totalPrice: 645,
+      isPaid: true,
+      paidAt: new Date(),
+      isDelivered: false,
+      status: "pending",
+    });
+
+    // Order 4: Delivered Order with 5-Star Rating & Review (Shows completed revenue & rider tip)
+    await Order.create({
+      user: customer._id,
+      orderItems: [
+        {
+          product: products[0]._id,
+          name: products[0].name,
+          quantity: 1,
+          image: products[0].image,
+          price: products[0].price,
+        },
+        {
+          product: products[4]._id,
+          name: products[4].name,
+          quantity: 1,
+          image: products[4].image,
+          price: products[4].price,
+        },
+      ],
+      shippingAddress: {
+        address: "House 15, Road 5, Block C",
         city: "Dhaka",
         postalCode: "1212",
         area: "Gulshan",
-        details: "Near Gulshan Lake Park",
       },
       paymentMethod: "Bkash",
       deliveryMethod: "Priority",
-      deliveryInstructions: "Call when you arrive, don't ring the bell",
-      itemsPrice: 650,
+      itemsPrice: 610,
       taxPrice: 0,
       shippingPrice: 60,
-      tipAmount: 15,
-      totalPrice: 725,
+      tipAmount: 50,
+      totalPrice: 720,
       isPaid: true,
-      paidAt: new Date(now.getTime() - 30 * 60 * 1000),
-      isDelivered: false,
-      status: "out_for_delivery",
+      paidAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+      isDelivered: true,
+      deliveredAt: new Date(now.getTime() - 23 * 60 * 60 * 1000),
+      status: "delivered",
       rider: rider._id,
-      estimatedDeliveryMinutes: 20,
-      acceptedAt: new Date(now.getTime() - 25 * 60 * 1000),
-      dispatchedAt: new Date(now.getTime() - 10 * 60 * 1000),
-      messages: [
+      rating: 5,
+      review: "The burger was exceptionally juicy and the lava cake was still warm and gooey. Super speedy delivery by Rahim!",
+      ratedAt: new Date(now.getTime() - 22 * 60 * 60 * 1000),
+    });
+
+    // Order 5: Delivered Order with Active Customer Support Ticket (For testing support resolver)
+    await Order.create({
+      user: customer._id,
+      orderItems: [
         {
-          senderRole: "rider",
-          senderName: "Rahim Rider",
-          text: "On my way with your order! 🏍️",
-          createdAt: new Date(now.getTime() - 9 * 60 * 1000),
+          product: products[2]._id,
+          name: products[2].name,
+          quantity: 1,
+          image: products[2].image,
+          price: products[2].price,
+        },
+        {
+          product: products[5]._id,
+          name: products[5].name,
+          quantity: 2,
+          image: products[5].image,
+          price: products[5].price,
         },
       ],
+      shippingAddress: {
+        address: "House 15, Road 5, Block C",
+        city: "Dhaka",
+        postalCode: "1212",
+        area: "Gulshan",
+      },
+      paymentMethod: "Card or Debit Card",
+      deliveryMethod: "Standard",
+      itemsPrice: 1010,
+      taxPrice: 0,
+      shippingPrice: 45,
+      tipAmount: 0,
+      totalPrice: 1055,
+      isPaid: true,
+      paidAt: new Date(now.getTime() - 3 * 60 * 60 * 1000),
+      isDelivered: true,
+      deliveredAt: new Date(now.getTime() - 2 * 60 * 60 * 1000),
+      status: "delivered",
+      rider: rider._id,
+      supportTickets: [
+        {
+          subject: "Missing extra dip sauces",
+          message: "Hi, I ordered extra garlic ranch dips with the pizza but they were not in the parcel bag.",
+          status: "open",
+          createdAt: new Date(now.getTime() - 90 * 60 * 1000),
+        },
+      ],
+    });
+
+    // Order 6: Cancelled Order (For testing history filters)
+    await Order.create({
+      user: customer._id,
+      orderItems: [
+        {
+          product: products[3]._id,
+          name: products[3].name,
+          quantity: 1,
+          image: products[3].image,
+          price: products[3].price,
+        },
+      ],
+      shippingAddress: {
+        address: "House 15, Road 5, Block C",
+        city: "Dhaka",
+        postalCode: "1212",
+        area: "Gulshan",
+      },
+      paymentMethod: "Cash on Delivery",
+      deliveryMethod: "Saver",
+      itemsPrice: 450,
+      taxPrice: 0,
+      shippingPrice: 30,
+      tipAmount: 0,
+      totalPrice: 480,
+      isPaid: false,
+      isDelivered: false,
+      status: "cancelled",
+      createdAt: new Date(now.getTime() - 48 * 60 * 60 * 1000),
     });
   }
 
@@ -515,6 +453,6 @@ export async function seedDemoData() {
       name: `${u.firstName} ${u.lastName}`,
     })),
     productsCount: products.length,
-    ordersCreated: existingOrders === 0,
+    ordersCount: await Order.countDocuments(),
   };
 }
