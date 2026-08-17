@@ -58,6 +58,8 @@ export const authOptions: NextAuthOptions = {
             email: user.email,
             isEmailVerified: user.isEmailVerified,
             role: user.role, // Include the user's role
+            restaurantName: user.restaurantName || "",
+            vehicleType: user.vehicleType || "",
           };
         } catch (error) {
           console.error("Authorization error:", error);
@@ -85,7 +87,9 @@ export const authOptions: NextAuthOptions = {
           contactNumber: user.contactNumber,
           email: user.email,
           isEmailVerified: user.isEmailVerified,
-          role: user.role, // Include the role in the JWT token
+          role: user.role,
+          restaurantName: user.restaurantName,
+          vehicleType: user.vehicleType,
         };
       }
       return token;
@@ -98,8 +102,10 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string;
         session.user.isEmailVerified = token.isEmailVerified as boolean;
         session.user.contactNumber = token.contactNumber as string;
-        session.user.role = token.role as "user" | "admin" | "rider"; // Add role to session
+        session.user.role = token.role as "customer" | "restaurant" | "rider";
         session.user.profilePicture = token.profilePicture as string;
+        session.user.restaurantName = token.restaurantName as string;
+        session.user.vehicleType = token.vehicleType as string;
       }
       return session;
     },

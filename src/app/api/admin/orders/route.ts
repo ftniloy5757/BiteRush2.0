@@ -13,9 +13,9 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
 
     // Check if user is authenticated and has admin role
-    if (!session || session.user.role !== "admin") {
+    if (!session || session.user.role !== "restaurant") {
       return NextResponse.json(
-        { error: "Unauthorized: Admin access required" },
+        { error: "Unauthorized: Restaurant access required" },
         { status: 403 }
       );
     }

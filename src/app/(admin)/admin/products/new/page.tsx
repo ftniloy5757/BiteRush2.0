@@ -29,7 +29,7 @@ export default function NewProductPage() {
     return null;
   }
 
-  if (status === "authenticated" && session?.user?.role !== "admin") {
+  if (status === "authenticated" && session?.user?.role !== "restaurant") {
     router.push("/unauthorized");
     return null;
   }

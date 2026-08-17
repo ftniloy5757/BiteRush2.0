@@ -1,7 +1,5 @@
 // /app/api/products/route.ts
 import { NextRequest, NextResponse } from "next/server";
-
-
 import { getServerSession } from "next-auth/next";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../auth/[...nextauth]/option";
@@ -22,11 +20,11 @@ export async function GET(req: NextRequest) {
     // Build filter object
     const filter: any = {};
 
-    if (category) filter.category = category;
+    if (category && category !== "all") filter.category = category;
     if (featured === "true") filter.featured = true;
     if (minPrice) filter.price = { $gte: parseFloat(minPrice) };
     if (maxPrice) {
-      filter.price = { ...filter.price, $lte: parseFloat(maxPrice) };
+      filter.price = { ...(filter.price || {}), $lte: parseFloat(maxPrice) };
     }
     if (minRating) filter.rating = { $gte: parseFloat(minRating) };
 
@@ -42,14 +40,14 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST create new product (admin only)
+// POST create new product (restaurant or admin)
 export async function POST(req: NextRequest) {
   try {
     await connectDB();
 
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "admin") {
+    if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

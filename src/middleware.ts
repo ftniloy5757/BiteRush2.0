@@ -12,7 +12,8 @@ export async function middleware(request: NextRequest) {
     if (
       url.pathname.startsWith("/profile") ||
       url.pathname.startsWith("/dashboard") ||
-      url.pathname.startsWith("/admin")
+      url.pathname.startsWith("/restaurant") ||
+      url.pathname.startsWith("/rider")
     ) {
       return NextResponse.redirect(new URL("/sign-in", request.url));
     }
@@ -24,18 +25,24 @@ export async function middleware(request: NextRequest) {
       url.pathname.startsWith("/sign-up") ||
       url.pathname.startsWith("/verify")
     ) {
+      const userRole = token.role as string;
+      if (userRole === "restaurant") {
+        return NextResponse.redirect(new URL("/restaurant", request.url));
+      } else if (userRole === "rider") {
+        return NextResponse.redirect(new URL("/rider", request.url));
+      }
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     // Role-based access control
     const userRole = token.role as string;
 
-    // Protect admin routes - only allow users with admin role
-    if (url.pathname.startsWith("/admin") && userRole !== "admin") {
+    // Protect restaurant routes - only allow restaurant role
+    if (url.pathname.startsWith("/restaurant") && userRole !== "restaurant") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
-    // Protect rider routes
+    // Protect rider routes - only allow rider role
     if (url.pathname.startsWith("/rider") && userRole !== "rider") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
@@ -53,8 +60,7 @@ export const config = {
     "/verify/:path*",
     "/profile/:path*",
     "/dashboard/:path*",
-    "/admin/:path*",
+    "/restaurant/:path*",
     "/rider/:path*",
   ],
 };
-

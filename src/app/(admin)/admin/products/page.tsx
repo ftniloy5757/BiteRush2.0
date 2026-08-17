@@ -52,7 +52,7 @@ export default function ProductsAdminPage() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/sign-in?callbackUrl=/admin/products");
-    } else if (status === "authenticated" && session?.user?.role !== "admin") {
+    } else if (status === "authenticated" && session?.user?.role !== "restaurant") {
       router.push("/unauthorized");
     }
   }, [status, session, router]);
@@ -87,7 +87,7 @@ export default function ProductsAdminPage() {
     );
   }
 
-  if (status === "authenticated" && session?.user?.role !== "admin") {
+  if (status === "authenticated" && session?.user?.role !== "restaurant") {
     return null; // Will redirect in useEffect
   }
 

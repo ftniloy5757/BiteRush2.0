@@ -3,7 +3,6 @@
 import React from "react";
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
-import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
 import {
   DropdownMenu,
@@ -13,17 +12,27 @@ import {
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { User, LogOut, Settings, LayoutDashboard, Shield } from "lucide-react";
+import {
+  User,
+  LogOut,
+  Settings,
+  LayoutDashboard,
+  ChefHat,
+  Bike,
+  UtensilsCrossed,
+  ClipboardList,
+  Headphones,
+  ShoppingBag,
+  ShoppingBag as CartIcon,
+} from "lucide-react";
 import { ModeToggle } from "./theme-toggle";
 
 export default function Navbar() {
   const { data: session } = useSession();
-  const router = useRouter();
 
   // Get user initials for avatar fallback
   const getUserInitials = () => {
     if (!session?.user?.firstName) return "U";
-
     return `${session.user.firstName[0]}${
       session.user.lastName ? session.user.lastName[0] : ""
     }`.toUpperCase();
@@ -33,166 +42,257 @@ export default function Navbar() {
     ? `${session.user.firstName || ""} ${session.user.lastName || ""}`.trim()
     : "User";
 
+  const userRole = session?.user?.role || "customer";
+
+  const getRoleBadge = () => {
+    switch (userRole) {
+      case "restaurant":
+        return <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Restaurant</span>;
+      case "rider":
+        return <span className="bg-violet-100 dark:bg-violet-950 text-violet-700 dark:text-violet-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Rider</span>;
+      default:
+        return <span className="bg-orange-100 dark:bg-orange-950 text-orange-700 dark:text-orange-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Customer</span>;
+    }
+  };
+
   return (
-    <nav className="p-4 md:p-6 shadow-md fixed top-0 left-0 right-0 bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 z-50">
-      <div className="container mx-auto flex flex-row justify-between items-center">
+    <nav className="p-3.5 md:p-4 shadow-sm fixed top-0 left-0 right-0 bg-white/90 dark:bg-gray-950/90 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 z-50 transition-colors">
+      <div className="container mx-auto flex flex-row justify-between items-center max-w-7xl px-2 sm:px-4">
         {/* Logo / Brand */}
-        <div className="flex items-center gap-4">
-          <Link href={session ? "/dashboard" : "/"}>
-            <h2 className="text-foreground text-lg font-bold leading-tight tracking-[-0.015em]">
-              BiteRush
-            </h2>
+        <div className="flex items-center gap-3">
+          <Link
+            href={
+              userRole === "restaurant"
+                ? "/restaurant"
+                : userRole === "rider"
+                ? "/rider"
+                : session
+                ? "/dashboard"
+                : "/"
+            }
+            className="flex items-center gap-2 group"
+          >
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
+              <ShoppingBag className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-gray-900 dark:text-gray-100 text-lg font-black tracking-tight leading-none">
+                BiteRush <span className="text-orange-500 text-xs font-bold">2.0</span>
+              </h2>
+            </div>
           </Link>
         </div>
 
-        {/* Navigation Links */}
-        <div className="hidden md:flex items-center space-x-6">
-          <Link
-            href="/menu"
-            className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
-          >
-            Menu
-          </Link>
-          <Link
-            href="/cart"
-            className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
-          >
-            Cart
-          </Link>
-          {session && (
+        {/* Role-Specific Navigation Links */}
+        <div className="hidden md:flex items-center space-x-6 text-sm font-semibold">
+          {/* Customer / Public links */}
+          {userRole === "customer" && (
             <>
               <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
+                href="/menu"
+                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
               >
+                Menu
+              </Link>
+              <Link
+                href="/cart"
+                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors flex items-center gap-1"
+              >
+                <CartIcon className="h-4 w-4" />
+                Cart
+              </Link>
+              {session && (
+                <>
+                  <Link
+                    href="/dashboard"
+                    className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
+                  >
+                    Feed
+                  </Link>
+                  <Link
+                    href="/orders"
+                    className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
+                  >
+                    My Orders
+                  </Link>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Restaurant links */}
+          {userRole === "restaurant" && (
+            <>
+              <Link
+                href="/restaurant"
+                className="text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+              >
+                <LayoutDashboard className="h-4 w-4" />
                 Dashboard
               </Link>
               <Link
-                href="/orders"
-                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
+                href="/restaurant/menu"
+                className="text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
               >
-                My Orders
+                <UtensilsCrossed className="h-4 w-4" />
+                Menu
               </Link>
-              {session.user.role === "rider" && (
-                <Link
-                  href="/rider/deliveries"
-                  className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
-                >
-                  Deliveries
-                </Link>
-              )}
-              {session.user.role === "admin" && (
-                <Link
-                  href="/admin"
-                  className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 font-medium transition-colors"
-                >
-                  Admin
-                </Link>
-              )}
+              <Link
+                href="/restaurant/orders"
+                className="text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Orders
+              </Link>
+              <Link
+                href="/restaurant/support"
+                className="text-gray-600 hover:text-emerald-600 dark:text-gray-300 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5"
+              >
+                <Headphones className="h-4 w-4" />
+                Support
+              </Link>
+            </>
+          )}
+
+          {/* Rider links */}
+          {userRole === "rider" && (
+            <>
+              <Link
+                href="/rider"
+                className="text-gray-600 hover:text-violet-600 dark:text-gray-300 dark:hover:text-violet-400 transition-colors flex items-center gap-1.5"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Link>
+              <Link
+                href="/rider/deliveries"
+                className="text-gray-600 hover:text-violet-600 dark:text-gray-300 dark:hover:text-violet-400 transition-colors flex items-center gap-1.5"
+              >
+                <Bike className="h-4 w-4" />
+                Deliveries
+              </Link>
             </>
           )}
         </div>
 
-        {/* Right-side Buttons */}
-        <div className="flex items-center gap-4">
-          {/* Theme Toggle */}
+        {/* Right-side Profile / Auth */}
+        <div className="flex items-center gap-3">
           <ModeToggle />
 
-          {/* Auth Buttons */}
           {session ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="relative rounded-full h-8 w-8 p-0"
-                >
+                <button className="flex items-center gap-2 rounded-full p-1 border border-gray-200 dark:border-gray-800 hover:bg-gray-50 dark:hover:bg-gray-900 transition-colors focus:outline-none">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={session.user?.profilePicture || ""}
-                      alt={fullName}
-                    />
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
+                    <AvatarImage src={session.user?.profilePicture || ""} alt={fullName} />
+                    <AvatarFallback className="bg-orange-500 text-white text-xs font-bold">
+                      {getUserInitials()}
+                    </AvatarFallback>
                   </Avatar>
-                </Button>
+                  <div className="hidden sm:block text-left pr-2">
+                    <span className="text-xs font-bold block leading-tight truncate max-w-[100px]">
+                      {session.user.firstName || "User"}
+                    </span>
+                    {getRoleBadge()}
+                  </div>
+                </button>
               </DropdownMenuTrigger>
+
               <DropdownMenuContent
                 align="end"
-                className="w-56 bg-white dark:bg-gray-950"
-                sideOffset={5}
-                onCloseAutoFocus={(e) => e.preventDefault()}
+                className="w-60 bg-white dark:bg-gray-950 p-2 rounded-2xl shadow-xl border border-gray-100 dark:border-gray-800"
               >
-                <div className="flex items-center justify-start gap-2 p-2">
-                  <Avatar className="h-8 w-8">
-                    <AvatarImage
-                      src={session.user?.profilePicture || ""}
-                      alt={fullName}
-                    />
-                    <AvatarFallback>{getUserInitials()}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">
+                <div className="p-2 space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-gray-900 dark:text-gray-100">
                       {fullName}
-                    </p>
-                    <p className="text-xs leading-none text-muted-foreground">
-                      {session.user?.email || ""}
-                    </p>
+                    </span>
+                    {getRoleBadge()}
                   </div>
+                  <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
                 </div>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem asChild>
-                  <Link href="/dashboard" className="flex w-full items-center">
-                    <LayoutDashboard className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/profile" className="flex w-full items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>My Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link
-                    href="/profile/edit"
-                    className="flex w-full items-center"
-                  >
-                    <Settings className="mr-2 h-4 w-4" />
-                    <span>Edit Profile</span>
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                  <Link href="/orders" className="flex w-full items-center">
-                    <User className="mr-2 h-4 w-4" />
-                    <span>Orders</span>
-                  </Link>
-                </DropdownMenuItem>
 
-                {/* Admin access */}
-                {session.user.role === "admin" && (
+                <DropdownMenuSeparator />
+
+                {/* Role Portals */}
+                {userRole === "customer" && (
                   <>
-                    <DropdownMenuSeparator />
                     <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex w-full items-center">
-                        <Shield className="mr-2 h-4 w-4" />
-                        <span>Admin Dashboard</span>
+                      <Link href="/dashboard" className="flex items-center text-xs py-2">
+                        <LayoutDashboard className="mr-2 h-4 w-4 text-orange-500" />
+                        <span>Customer Dashboard</span>
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                      <Link
-                        href="/admin/create-admin"
-                        className="flex w-full items-center"
-                      >
-                        <Shield className="mr-2 h-4 w-4" />
-                        <span>Create Admin</span>
+                      <Link href="/orders" className="flex items-center text-xs py-2">
+                        <ClipboardList className="mr-2 h-4 w-4 text-orange-500" />
+                        <span>My Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {userRole === "restaurant" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/restaurant" className="flex items-center text-xs py-2">
+                        <ChefHat className="mr-2 h-4 w-4 text-emerald-500" />
+                        <span>Restaurant Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/restaurant/menu" className="flex items-center text-xs py-2">
+                        <UtensilsCrossed className="mr-2 h-4 w-4 text-emerald-500" />
+                        <span>Manage Menu</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/restaurant/orders" className="flex items-center text-xs py-2">
+                        <ClipboardList className="mr-2 h-4 w-4 text-emerald-500" />
+                        <span>Incoming Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {userRole === "rider" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/rider" className="flex items-center text-xs py-2">
+                        <Bike className="mr-2 h-4 w-4 text-violet-500" />
+                        <span>Rider Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/rider/deliveries" className="flex items-center text-xs py-2">
+                        <ClipboardList className="mr-2 h-4 w-4 text-violet-500" />
+                        <span>Active Deliveries</span>
                       </Link>
                     </DropdownMenuItem>
                   </>
                 )}
 
                 <DropdownMenuSeparator />
+
+                <DropdownMenuItem asChild>
+                  <Link href="/profile" className="flex items-center text-xs py-2">
+                    <User className="mr-2 h-4 w-4 text-gray-500" />
+                    <span>My Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuItem asChild>
+                  <Link href="/profile/edit" className="flex items-center text-xs py-2">
+                    <Settings className="mr-2 h-4 w-4 text-gray-500" />
+                    <span>Edit Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+
+                <DropdownMenuSeparator />
+
                 <DropdownMenuItem
                   onClick={() => signOut({ callbackUrl: "/sign-in" })}
-                  className="flex items-center text-red-500 focus:text-red-500"
+                  className="flex items-center text-xs text-red-500 focus:text-red-500 py-2 cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Sign Out</span>
@@ -200,14 +300,16 @@ export default function Navbar() {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               <Link href="/sign-in">
-                <Button variant="ghost" className="w-auto">
+                <Button variant="ghost" className="text-xs font-bold rounded-xl">
                   Sign In
                 </Button>
               </Link>
               <Link href="/sign-up">
-                <Button className="w-auto rounded-lg">Sign Up</Button>
+                <Button className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-bold rounded-xl shadow">
+                  Sign Up
+                </Button>
               </Link>
             </div>
           )}

@@ -8,7 +8,9 @@ declare module "next-auth" {
     contactNumber?: string;
     email?: string;
     isEmailVerified?: boolean;
-    role?: "user" | "admin" | "rider"; // Add role to User interface
+    role?: "customer" | "restaurant" | "rider";
+    restaurantName?: string;
+    vehicleType?: string;
   }
 
   interface Session {
@@ -19,8 +21,10 @@ declare module "next-auth" {
       contactNumber?: string;
       email?: string;
       isEmailVerified?: boolean;
-      role?: "user" | "admin" | "rider"; // Add role to Session user
-      profilePicture?: string; // Add this line
+      role?: "customer" | "restaurant" | "rider";
+      profilePicture?: string;
+      restaurantName?: string;
+      vehicleType?: string;
     };
   }
 }
@@ -33,7 +37,9 @@ declare module "next-auth/jwt" {
     contactNumber?: string;
     email?: string;
     isEmailVerified?: boolean;
-    role?: "user" | "admin" | "rider"; // Add role to JWT
+    role?: "customer" | "restaurant" | "rider";
     profilePicture?: string;
+    restaurantName?: string;
+    vehicleType?: string;
   }
 }

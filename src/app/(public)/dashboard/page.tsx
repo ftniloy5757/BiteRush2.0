@@ -1,34 +1,120 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession } from "next-auth/react";
-import { Utensils } from "lucide-react";
+import {
+  Utensils,
+  Sparkles,
+  Flame,
+  Clock,
+  Plus,
+  ShoppingBag,
+  ArrowRight,
+  ChefHat,
+  Bike,
+  Star,
+  CheckCircle,
+} from "lucide-react";
 import Chatbot from "@/components/Chatbot";
+
+interface Product {
+  _id: string;
+  name: string;
+  description: string;
+  price: number;
+  category: string;
+  image: string;
+  rating: number;
+  prepTime?: string;
+  inStock: boolean;
+}
+
+interface ActiveOrder {
+  _id: string;
+  status: string;
+  totalPrice: number;
+  orderItems: { name: string; quantity: number }[];
+  createdAt: string;
+}
 
 export default function DashboardGreeting() {
   const { data: session, status } = useSession();
   const [chatbotVisible, setChatbotVisible] = useState(false);
+  const [recommendations, setRecommendations] = useState<{
+    personalized: Product[];
+    trending: Product[];
+    topCategories: string[];
+  }>({ personalized: [], trending: [], topCategories: [] });
+  const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [recRes, ordersRes] = await Promise.all([
+          fetch("/api/recommendations"),
+          fetch("/api/orders"),
+        ]);
+        if (recRes.ok) {
+          const recData = await recRes.json();
+          setRecommendations(recData);
+        }
+        if (ordersRes.ok) {
+          const ordData = await ordersRes.json();
+          const active = (ordData.orders || []).filter((o: any) =>
+            ["pending", "accepted", "preparing", "ready_for_pickup", "out_for_delivery"].includes(o.status)
+          );
+          setActiveOrders(active);
+        }
+      } catch (err) {
+        console.error("Dashboard fetch error:", err);
+      } finally {
+        setLoadingData(false);
+      }
+    }
+
+    if (status === "authenticated") {
+      fetchData();
+    }
+  }, [status]);
+
+  const addToCart = (product: Product) => {
+    const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const idx = cart.findIndex((item: any) => item._id === product._id);
+    if (idx >= 0) {
+      cart[idx].quantity += 1;
+    } else {
+      cart.push({ ...product, quantity: 1 });
+    }
+    localStorage.setItem("cart", JSON.stringify(cart));
+    alert(`Added ${product.name} to cart! 🛒`);
+  };
 
   if (status === "loading") {
     return (
-      <div className="min-h-screen bg-orange-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="text-orange-600 dark:text-orange-400 text-lg font-medium">Loading...</div>
+      <div className="min-h-[60vh] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   if (!session) {
     return (
-      <div className="min-h-screen bg-orange-50 dark:bg-gray-950 flex flex-col items-center justify-center p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg p-8 max-w-md w-full text-center">
-          <div className="text-red-500 mb-4 text-xl font-semibold">
-            You must be logged in to view the dashboard
-          </div>
+      <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 max-w-md w-full text-center border border-gray-100 dark:border-gray-800 space-y-4">
+          <Utensils className="h-12 w-12 text-orange-500 mx-auto" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">
+            Sign in to BiteRush
+          </h2>
+          <p className="text-sm text-gray-500">
+            Access your personalized menu, active orders, and fast delivery.
+          </p>
           <Link
             href="/sign-in"
-            className="inline-block bg-gradient-to-r from-orange-500 to-amber-600 text-white px-6 py-3 rounded-md font-medium hover:from-orange-600 hover:to-amber-700 transition-colors"
+            className="inline-block w-full bg-gradient-to-r from-orange-500 to-amber-600 text-white font-bold py-3 rounded-xl hover:from-orange-600 hover:to-amber-700 transition-all shadow-md text-sm"
           >
             Sign In
           </Link>
@@ -37,96 +123,276 @@ export default function DashboardGreeting() {
     );
   }
 
-  // Extract first name for personalized greeting
-  const firstName = session?.user?.firstName || session?.user?.email?.split("@")[0] || "foodie";
+  // Redirect role users to their dashboards if landed here
+  if (session.user.role === "restaurant") {
+    return (
+      <div className="p-8 text-center bg-white dark:bg-gray-900 rounded-2xl shadow-md border space-y-4">
+        <ChefHat className="h-16 w-16 text-emerald-600 mx-auto" />
+        <h2 className="text-2xl font-bold">Restaurant Manager Account</h2>
+        <p className="text-gray-500">You are logged in with the restaurant manager role.</p>
+        <Link href="/restaurant" className="inline-block bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl shadow">
+          Go to Restaurant Portal →
+        </Link>
+      </div>
+    );
+  }
+
+  if (session.user.role === "rider") {
+    return (
+      <div className="p-8 text-center bg-white dark:bg-gray-900 rounded-2xl shadow-md border space-y-4">
+        <Bike className="h-16 w-16 text-violet-600 mx-auto" />
+        <h2 className="text-2xl font-bold">Delivery Rider Account</h2>
+        <p className="text-gray-500">You are logged in with the delivery rider role.</p>
+        <Link href="/rider" className="inline-block bg-violet-600 hover:bg-violet-700 text-white font-bold px-6 py-3 rounded-xl shadow">
+          Go to Rider Portal →
+        </Link>
+      </div>
+    );
+  }
+
+  const firstName = session?.user?.firstName || "Foodie";
   const timeOfDay = getTimeOfDay();
 
-  // Function to toggle the chatbot visibility
-  const toggleChatbot = () => {
-    setChatbotVisible(!chatbotVisible);
-  };
-
   return (
-    <div className="relative min-h-screen">
-      {/* Background image with blur effect */}
-      <div
-        className="absolute inset-0 bg-cover bg-center z-0"
-        style={{
-          backgroundImage: "url('/dashboard.jpg')", // Path to your background image in the public folder
-          filter: "blur(10px)", // Apply blur effect
-        }}
-      ></div>
+    <div className="space-y-8 pb-12">
+      {/* Greeting Banner */}
+      <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
+        <div className="relative z-10 max-w-2xl space-y-3">
+          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit text-xs font-semibold">
+            <Sparkles className="h-3.5 w-3.5" /> BiteRush 2.0
+          </div>
+          <h1 className="text-3xl sm:text-4xl font-extrabold">
+            Good {timeOfDay}, {firstName}! 🍔
+          </h1>
+          <p className="text-orange-100 text-sm sm:text-base">
+            Craving something delicious? Explore our curated recommendations or track active deliveries.
+          </p>
 
-      {/* Content overlay */}
-      <div className="relative z-10 py-12 px-4">
-        <div className="max-w-4xl mx-auto">
-          {/* Greeting Header */}
-          <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-2xl p-8 text-white">
-            <div className="flex items-center mb-6">
-              <Utensils className="h-10 w-10 mr-3" />
-              <h1 className="text-3xl font-bold">BiteRush</h1>
-            </div>
-
-            <div className="text-center py-8">
-              <h2 className="text-4xl font-bold mb-3">
-                Good {timeOfDay}, {firstName}!
-              </h2>
-              <p className="text-xl opacity-90">
-                Welcome to your food delivery dashboard
-              </p>
-              <p className="mt-2 text-lg opacity-80">
-                What would you like to order today?
-              </p>
-
-              <div className="mt-8 flex justify-center gap-4">
-                <Link
-                  href="/menu"
-                  className="bg-white text-orange-600 hover:bg-orange-100 transition-colors px-6 py-3 rounded-md font-medium text-lg"
-                >
-                  Browse Menu
-                </Link>
-                <Link
-                  href="/cart"
-                  className="bg-orange-700 text-white hover:bg-orange-800 transition-colors px-6 py-3 rounded-md font-medium text-lg"
-                >
-                  View Cart
-                </Link>
-                <Link
-                  href="/orders"
-                  className="bg-red-700 text-white hover:bg-red-800 transition-colors px-6 py-3 rounded-md font-medium text-lg"
-                >
-                  View Orders
-                </Link>
-              </div>
-
-              {/* Chatbot Toggle Button with Typing Animation */}
-              <div className="mt-16 flex justify-center items-center gap-4">
-                <button
-                  onClick={toggleChatbot}
-                  className="bg-blue-500 text-white px-6 py-3 rounded-md font-medium text-lg hover:bg-blue-600 transition-colors"
-                >
-                  <span className="typing-animation">
-                    {chatbotVisible ? 'Close Chatbot' : 'Can I help you?'}
-                  </span>
-                </button>
-                <img
-                  src="/bot.gif" // Path to the bot gif image in the public folder
-                  alt="Bot Cartoon"
-                  className="w-24 h-24 ml-4" // Increased size of the gif
-                />
-              </div>
-            </div>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <Link
+              href="/menu"
+              className="bg-white text-orange-600 hover:bg-orange-50 font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5"
+            >
+              <Utensils className="h-4 w-4" /> Browse Full Menu
+            </Link>
+            <Link
+              href="/orders"
+              className="bg-orange-700/60 hover:bg-orange-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm border border-white/30 transition-all flex items-center gap-1.5"
+            >
+              <Clock className="h-4 w-4" /> Track Orders
+            </Link>
           </div>
         </div>
       </div>
 
-      {/* Show Chatbot when chatbotVisible is true */}
+      {/* Active Orders Live Banner */}
+      {activeOrders.length > 0 && (
+        <div className="space-y-3">
+          <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <Clock className="h-5 w-5 text-orange-500 animate-spin" />
+            Live Deliveries ({activeOrders.length})
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {activeOrders.map((ord) => (
+              <Link
+                key={ord._id}
+                href={`/orders/${ord._id}`}
+                className="bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40 rounded-2xl p-4 flex items-center justify-between hover:shadow-md transition-all"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-sm text-gray-900 dark:text-gray-100">
+                      Order #{ord._id.slice(-6).toUpperCase()}
+                    </span>
+                    <span className="bg-orange-500 text-white text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">
+                      {ord.status.replace(/_/g, " ")}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-600 dark:text-gray-400">
+                    {ord.orderItems.map((it) => `${it.quantity}x ${it.name}`).join(", ")}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 text-orange-600 font-bold text-xs">
+                  <span>Track Live</span>
+                  <ArrowRight className="h-4 w-4" />
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Personalized Recommendations Section */}
+      {recommendations.personalized.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-orange-500" />
+                Recommended For You
+              </h2>
+              <p className="text-xs text-gray-500">
+                Personalized based on your favorite categories ({recommendations.topCategories.join(", ")})
+              </p>
+            </div>
+            <Link
+              href="/menu"
+              className="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1"
+            >
+              See All <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {recommendations.personalized.map((product) => (
+              <div
+                key={product._id}
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col justify-between transition-all group"
+              >
+                <div className="relative h-44 w-full bg-gray-100">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <span className="absolute top-2.5 left-2.5 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                    ✨ Recommended
+                  </span>
+                </div>
+
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">
+                        {product.name}
+                      </h3>
+                      <span className="text-base font-extrabold text-orange-600">
+                        ৳{product.price}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                      {product.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-yellow-500">
+                      <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                      <span>{product.rating.toFixed(1)}</span>
+                      {product.prepTime && (
+                        <span className="text-gray-400 font-normal ml-1">
+                          · {product.prepTime}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Trending & Featured Dishes */}
+      {recommendations.trending.length > 0 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+                <Flame className="h-5 w-5 text-red-500" />
+                Popular & Trending Now
+              </h2>
+              <p className="text-xs text-gray-500">
+                Top rated picks from BiteRush Kitchen
+              </p>
+            </div>
+            <Link
+              href="/menu"
+              className="text-xs font-bold text-orange-600 hover:underline flex items-center gap-1"
+            >
+              View Menu <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+            {recommendations.trending.map((product) => (
+              <div
+                key={product._id}
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col justify-between transition-all group"
+              >
+                <div className="relative h-44 w-full bg-gray-100">
+                  <Image
+                    src={product.image}
+                    alt={product.name}
+                    fill
+                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
+                    🔥 Popular
+                  </span>
+                </div>
+
+                <div className="p-4 flex-1 flex flex-col justify-between space-y-3">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-bold text-base text-gray-900 dark:text-gray-100">
+                        {product.name}
+                      </h3>
+                      <span className="text-base font-extrabold text-orange-600">
+                        ৳{product.price}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-2 mt-1">
+                      {product.description}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center gap-1 text-xs font-semibold text-yellow-500">
+                      <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                      <span>{product.rating.toFixed(1)}</span>
+                      {product.prepTime && (
+                        <span className="text-gray-400 font-normal ml-1">
+                          · {product.prepTime}
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => addToCart(product)}
+                      className="flex items-center gap-1 bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold px-3 py-1.5 rounded-xl shadow transition-colors"
+                    >
+                      <Plus className="h-3.5 w-3.5" /> Add
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* AI Assistant Chatbot Toggle */}
+      <div className="flex justify-end pt-4">
+        <button
+          onClick={() => setChatbotVisible(!chatbotVisible)}
+          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-lg hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center gap-2"
+        >
+          <span>🤖 {chatbotVisible ? "Close AI Food Assistant" : "Ask AI Food Assistant"}</span>
+        </button>
+      </div>
+
       {chatbotVisible && <Chatbot />}
     </div>
   );
 }
 
-// Helper function to get time of day for greeting
 function getTimeOfDay() {
   const hour = new Date().getHours();
   if (hour < 12) return "morning";

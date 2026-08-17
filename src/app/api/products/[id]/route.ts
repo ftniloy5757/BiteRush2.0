@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, context: any) {
 
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "admin") {
+    if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest, context: any) {
 
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "admin") {
+    if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

@@ -10,7 +10,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 // Helper function to check if user is admin
 async function isAdmin() {
   const session = await getServerSession(authOptions);
-  return session?.user?.role === "admin";
+  return session?.user?.role === "restaurant";
 }
 
 // GET - Fetch a specific user

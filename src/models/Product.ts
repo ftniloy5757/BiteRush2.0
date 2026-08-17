@@ -10,7 +10,9 @@ export interface IProduct extends Document {
   rating: number;
   numReviews: number;
   inStock: boolean;
+  isAvailable: boolean;
   featured: boolean;
+  prepTime: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,9 +56,17 @@ const productSchema = new Schema<IProduct>(
       type: Boolean,
       default: true,
     },
+    isAvailable: {
+      type: Boolean,
+      default: true,
+    },
     featured: {
       type: Boolean,
       default: false,
+    },
+    prepTime: {
+      type: String,
+      default: "15-20 min",
     },
   },
   {

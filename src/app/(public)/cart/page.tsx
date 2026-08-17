@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Trash2 } from "lucide-react";
+import { Trash2, ShoppingBag, Plus, Minus, ArrowRight, ArrowLeft } from "lucide-react";
 
 interface CartItem {
   _id: string;
@@ -22,20 +22,16 @@ export default function CartPage() {
 
   // Load cart items from localStorage
   useEffect(() => {
-    const loadCart = () => {
-      try {
-        const savedCart = localStorage.getItem("cart");
-        const parsedCart = savedCart ? JSON.parse(savedCart) : [];
-        setCartItems(parsedCart);
-      } catch (error) {
-        console.error("Error loading cart:", error);
-        setCartItems([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadCart();
+    try {
+      const savedCart = localStorage.getItem("cart");
+      const parsedCart = savedCart ? JSON.parse(savedCart) : [];
+      setCartItems(parsedCart);
+    } catch (error) {
+      console.error("Error loading cart:", error);
+      setCartItems([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Update localStorage when cart changes
@@ -45,10 +41,8 @@ export default function CartPage() {
     }
   }, [cartItems, isLoading]);
 
-  // Handle quantity change
   const updateQuantity = (id: string, newQuantity: number) => {
     if (newQuantity < 1) return;
-
     setCartItems((prev) =>
       prev.map((item) =>
         item._id === id ? { ...item, quantity: newQuantity } : item
@@ -56,185 +50,180 @@ export default function CartPage() {
     );
   };
 
-  // Remove item from cart
   const removeItem = (id: string) => {
     setCartItems((prev) => prev.filter((item) => item._id !== id));
   };
 
-  // Clear entire cart
   const clearCart = () => {
     if (confirm("Are you sure you want to clear your cart?")) {
       setCartItems([]);
     }
   };
 
-  // Proceed to checkout
-  const checkout = () => {
-    router.push("/checkout");
-  };
-
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl">Loading your cart...</div>
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="text-gray-500 font-medium">Loading your cart...</div>
       </div>
     );
   }
 
-  // Calculate total price
   const totalPrice = cartItems.reduce(
     (sum, item) => sum + item.price * item.quantity,
     0
   );
 
   return (
-    <div className="container mx-auto px-4 py-8 min-h-screen relative">
-      {/* Background Image Container (only blurred image) */}
-      <div
-        className="absolute top-0 left-0 w-full h-full bg-cover bg-center"
-        style={{
-          backgroundImage: `url('https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1920&q=80')`,
-          backgroundPosition: "center",
-          backgroundAttachment: "fixed", // Keep the background fixed as you scroll
-          filter: "blur(5px)", // Apply blur only to the background image
-        }}
-      ></div>
+    <div className="max-w-4xl mx-auto py-8 px-4 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 dark:text-gray-100 flex items-center gap-2">
+            <ShoppingBag className="h-7 w-7 text-orange-500" />
+            Your Food Cart
+          </h1>
+          <p className="text-sm text-gray-500">
+            Review your selected dishes before checkout
+          </p>
+        </div>
+        {cartItems.length > 0 && (
+          <button
+            onClick={clearCart}
+            className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors"
+          >
+            Clear All
+          </button>
+        )}
+      </div>
 
-      {/* Content Wrapper */}
-      <div className="relative z-10">
-        {/* "Your Cart" Heading with Orange Border and Light Blue Background */}
-        <h1
-          className="text-4xl font-extrabold mb-8 text-center text-black mt-[-30px] p-4"
-          style={{
-            backgroundColor: "#d8e7f5", // Light blue background inside
-            border: "3px solid #e97f3e", // Orange border
-            padding: "10px", // Padding for better spacing
-            borderRadius: "12px", // Rounded corners
-            display: "block", // Make the heading span the full width
-            width: "100%", // Full width of the container
-            maxWidth: "100%", // Full width of the container
-          }}
-        >
-          Your Cart
-        </h1>
-
-        {cartItems.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="text-gray-500 text-6xl mb-4">🛒</div>
-            <p className="text-xl mb-8 text-white">Your cart is empty</p>
-            <Link
-              href="/menu"
-              className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded"
-            >
-              Browse Menu
-            </Link>
+      {cartItems.length === 0 ? (
+        <div className="text-center py-16 bg-white dark:bg-gray-900 rounded-3xl shadow-sm border border-gray-100 dark:border-gray-800 p-8 space-y-4">
+          <div className="w-16 h-16 rounded-full bg-orange-50 dark:bg-orange-950/40 text-orange-500 flex items-center justify-center mx-auto text-2xl">
+            🛒
           </div>
-        ) : (
-          <>
-            <div className="space-y-6">
-              {cartItems.map((item) => (
-                <div
-                  key={item._id}
-                  className="flex justify-between items-center bg-white shadow-lg rounded-lg p-4"
-                >
-                  <div className="flex items-center space-x-4 w-full">
-                    <div className="w-20 h-20 relative">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover rounded-md"
-                      />
-                    </div>
-                    <div className="w-full">
-                      <h3 className="text-lg font-semibold text-gray-900">{item.name}</h3>
-                      <p className="text-sm text-gray-600 capitalize">{item.category}</p>
-                    </div>
-                  </div>
+          <h2 className="text-lg font-bold text-gray-700 dark:text-gray-300">
+            Your cart is empty
+          </h2>
+          <p className="text-sm text-gray-400 max-w-sm mx-auto">
+            Explore our delicious burgers, pizzas, pastas and beverages to fill up your cart!
+          </p>
+          <Link
+            href="/menu"
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white text-xs font-bold px-6 py-3 rounded-2xl shadow transition-all"
+          >
+            Browse Delicious Menu <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
+          {/* Cart Items List */}
+          <div className="lg:col-span-2 space-y-3">
+            {cartItems.map((item) => (
+              <div
+                key={item._id}
+                className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 flex items-center gap-4 transition-all"
+              >
+                <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
+                  <Image
+                    src={
+                      item.image ||
+                      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=400&fit=crop"
+                    }
+                    alt={item.name}
+                    fill
+                    className="object-cover"
+                  />
+                </div>
 
-                  {/* Column for price, quantity, and total */}
-                  <div className="flex items-center space-x-8 w-full justify-between">
-                    <div className="text-sm text-gray-900">{item.price.toFixed(2)}</div>
-                    <div className="flex items-center space-x-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-base text-gray-900 dark:text-gray-100 truncate">
+                    {item.name}
+                  </h3>
+                  <span className="text-xs text-gray-400 capitalize block mb-2">
+                    {item.category} · ৳{item.price} each
+                  </span>
+
+                  {/* Quantity Controls */}
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
                       <button
                         onClick={() => updateQuantity(item._id, item.quantity - 1)}
-                        className="bg-gray-200 px-2 py-1 rounded-l"
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
                       >
-                        -
+                        <Minus className="h-3.5 w-3.5" />
                       </button>
-                      <input
-                        type="number"
-                        min="1"
-                        value={item.quantity}
-                        onChange={(e) =>
-                          updateQuantity(item._id, parseInt(e.target.value) || 1)
-                        }
-                        className="w-12 text-center border-t border-b"
-                      />
+                      <span className="px-3 text-xs font-bold text-gray-900 dark:text-gray-100">
+                        {item.quantity}
+                      </span>
                       <button
                         onClick={() => updateQuantity(item._id, item.quantity + 1)}
-                        className="bg-gray-200 px-2 py-1 rounded-r"
+                        className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-600 dark:text-gray-300"
                       >
-                        +
+                        <Plus className="h-3.5 w-3.5" />
                       </button>
                     </div>
-                    <div className="text-sm text-gray-900">
-                      {(item.price * item.quantity).toFixed(2)}
-                    </div>
+
                     <button
                       onClick={() => removeItem(item._id)}
-                      className="text-red-600 hover:text-red-900 flex items-center gap-1"
+                      className="text-gray-400 hover:text-red-500 p-1.5 transition-colors"
+                      title="Remove item"
                     >
-                      <Trash2 className="h-4 w-4" /> Remove Item
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
-              ))}
-            </div>
 
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 mt-8">
-              <button
-                onClick={clearCart}
-                className="bg-red-500 hover:bg-red-600 text-white font-bold py-2 px-4 rounded mb-4 md:mb-0"
-              >
-                Clear Cart
-              </button>
-
-              <div className="bg-gray-100 p-6 rounded-lg w-full md:w-96 mt-6 md:mt-0 border border-black">
-                <h2 className="text-lg font-bold mb-4">Order Summary</h2>
-                {cartItems.map((item) => (
-                  <div className="flex justify-between mb-2" key={item._id}>
-                    <span>{item.name}</span>
-                    <span>
-                      {item.quantity} × {item.price.toFixed(2)} ={" "}
-                      {(item.quantity * item.price).toFixed(2)}
-                    </span>
-                  </div>
-                ))}
-                <div className="border-t pt-2 mt-2 flex justify-between font-bold">
-                  <span>Total</span>
-                  <span>৳{totalPrice.toFixed(2)}</span> {/* Total with "৳" sign here */}
+                <div className="text-right flex-shrink-0">
+                  <span className="text-base font-extrabold text-gray-900 dark:text-gray-100">
+                    ৳{(item.price * item.quantity).toFixed(2)}
+                  </span>
                 </div>
-                <button
-                  onClick={checkout}
-                  className="mt-4 w-full bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded"
-                >
-                  Proceed to Checkout
-                </button>
+              </div>
+            ))}
+
+            <div className="pt-2">
+              <Link
+                href="/menu"
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-orange-600 hover:underline"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" /> Continue Adding Items
+              </Link>
+            </div>
+          </div>
+
+          {/* Cart Summary */}
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-md border border-gray-200 dark:border-gray-800 p-6 space-y-4 sticky top-24">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
+              Summary
+            </h2>
+
+            <div className="space-y-2 text-xs text-gray-600 dark:text-gray-400">
+              <div className="flex justify-between">
+                <span>Items Subtotal</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  ৳{totalPrice.toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Estimated Delivery</span>
+                <span className="font-semibold text-gray-900 dark:text-gray-100">
+                  ৳45.00
+                </span>
+              </div>
+              <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex justify-between text-base font-extrabold text-gray-900 dark:text-gray-100">
+                <span>Estimated Total</span>
+                <span className="text-orange-600">৳{(totalPrice + 45).toFixed(2)}</span>
               </div>
             </div>
 
-            <div className="text-center">
-              <Link
-                href="/products"
-                className="bg-black hover:bg-gray-800 text-white font-bold py-2 px-6 rounded"
-              >
-                ← Continue Shopping
-              </Link>
-            </div>
-          </>
-        )}
-      </div>
+            <button
+              onClick={() => router.push("/checkout")}
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 rounded-2xl shadow-lg transition-all flex items-center justify-center gap-2 text-sm"
+            >
+              Proceed to Checkout <ArrowRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

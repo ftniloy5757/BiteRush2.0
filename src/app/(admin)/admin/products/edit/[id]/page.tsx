@@ -76,7 +76,7 @@ export default function EditProductPage() {
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push(`/sign-in?callbackUrl=/admin/products/edit/${productId}`);
-    } else if (status === "authenticated" && session?.user?.role !== "admin") {
+    } else if (status === "authenticated" && session?.user?.role !== "restaurant") {
       router.push("/unauthorized");
     }
   }, [status, session, router, productId]);
@@ -143,7 +143,7 @@ export default function EditProductPage() {
     );
   }
 
-  if (status === "authenticated" && session?.user?.role !== "admin") {
+  if (status === "authenticated" && session?.user?.role !== "restaurant") {
     return null; // Will redirect in useEffect
   }
 

@@ -6,7 +6,7 @@ export interface IUser extends Document {
   email: string;
   passwordHash: string;
   bio?: string;
-  role: "user" | "admin" | "rider";
+  role: "customer" | "restaurant" | "rider";
   profilePicture?: string;
   contactNumber?: string;
   themePreference: "light" | "dark";
@@ -19,6 +19,12 @@ export interface IUser extends Document {
   isEmailVerified: boolean;
   resetToken?: string;
   resetTokenExpiry?: Date;
+  // Restaurant-specific fields
+  restaurantName?: string;
+  restaurantAddress?: string;
+  // Rider-specific fields
+  vehicleType?: string;
+  activeStatus?: boolean;
 }
 
 const userSchema = new Schema<IUser>(
@@ -26,11 +32,11 @@ const userSchema = new Schema<IUser>(
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     email: { type: String, unique: true, required: true },
-    role: { type: String, enum: ["user", "admin", "rider"], default: "user" },
+    role: { type: String, enum: ["customer", "restaurant", "rider"], default: "customer" },
     passwordHash: { type: String, required: true },
     bio: String,
     profilePicture: String,
-    contactNumber: { type: String, unique: true },
+    contactNumber: { type: String, unique: true, sparse: true },
     themePreference: {
       type: String,
       enum: ["light", "dark"],
@@ -49,6 +55,12 @@ const userSchema = new Schema<IUser>(
     isEmailVerified: { type: Boolean, default: false },
     resetToken: String,
     resetTokenExpiry: Date,
+    // Restaurant-specific fields
+    restaurantName: String,
+    restaurantAddress: String,
+    // Rider-specific fields
+    vehicleType: String,
+    activeStatus: { type: Boolean, default: true },
   },
   { timestamps: true }
 );

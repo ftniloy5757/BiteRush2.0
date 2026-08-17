@@ -18,12 +18,29 @@ export interface ShippingAddress {
   details?: string;
 }
 
+export interface ChatMessage {
+  senderRole: "customer" | "rider" | "restaurant";
+  senderName: string;
+  text: string;
+  createdAt: Date;
+}
+
+export interface SupportTicket {
+  issueType: string;
+  message: string;
+  status: "open" | "resolved";
+  response?: string;
+  createdAt: Date;
+  resolvedAt?: Date;
+}
+
 export interface IOrder extends Document {
   user: mongoose.Types.ObjectId | IUser;
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
   paymentMethod: string;
   deliveryMethod: string;
+  deliveryInstructions?: string;
   itemsPrice: number;
   taxPrice: number;
   shippingPrice: number;
@@ -33,8 +50,20 @@ export interface IOrder extends Document {
   paidAt?: Date;
   isDelivered: boolean;
   deliveredAt?: Date;
-  status: "pending" | "processing" | "out_for_delivery" | "delivered" | "cancelled";
+  status: "pending" | "accepted" | "preparing" | "ready_for_pickup" | "out_for_delivery" | "delivered" | "declined" | "cancelled";
   rider?: mongoose.Types.ObjectId | IUser;
+  // Rating & review
+  rating?: number;
+  review?: string;
+  ratedAt?: Date;
+  // Timing
+  estimatedDeliveryMinutes?: number;
+  acceptedAt?: Date;
+  dispatchedAt?: Date;
+  // Chat messages between customer and rider
+  messages: ChatMessage[];
+  // Support tickets
+  supportTickets: SupportTicket[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -76,6 +105,7 @@ const orderSchema = new Schema<IOrder>(
       required: true,
       enum: ["Saver", "Standard", "Priority"],
     },
+    deliveryInstructions: { type: String },
     itemsPrice: {
       type: Number,
       required: true,
@@ -120,13 +150,41 @@ const orderSchema = new Schema<IOrder>(
     status: {
       type: String,
       required: true,
-      enum: ["pending", "processing", "out_for_delivery", "delivered", "cancelled"],
+      enum: ["pending", "accepted", "preparing", "ready_for_pickup", "out_for_delivery", "delivered", "declined", "cancelled"],
       default: "pending",
     },
     rider: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    // Rating & review
+    rating: { type: Number, min: 1, max: 5 },
+    review: { type: String },
+    ratedAt: { type: Date },
+    // Timing
+    estimatedDeliveryMinutes: { type: Number },
+    acceptedAt: { type: Date },
+    dispatchedAt: { type: Date },
+    // Chat messages
+    messages: [
+      {
+        senderRole: { type: String, enum: ["customer", "rider", "restaurant"], required: true },
+        senderName: { type: String, required: true },
+        text: { type: String, required: true },
+        createdAt: { type: Date, default: Date.now },
+      },
+    ],
+    // Support tickets
+    supportTickets: [
+      {
+        issueType: { type: String, required: true },
+        message: { type: String, required: true },
+        status: { type: String, enum: ["open", "resolved"], default: "open" },
+        response: { type: String },
+        createdAt: { type: Date, default: Date.now },
+        resolvedAt: { type: Date },
+      },
+    ],
   },
   {
     timestamps: true,

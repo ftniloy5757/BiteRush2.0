@@ -22,11 +22,11 @@ export default function CreateAdminForm() {
     bio: "",
   });
 
-  // Check if current user is admin
-  if (session?.user.role !== "admin") {
+  // Check if current user is restaurant manager
+  if (session?.user.role !== "restaurant") {
     return (
       <div className="text-red-500">
-        Access denied: Admin privileges required
+        Access denied: Restaurant privileges required
       </div>
     );
   }
