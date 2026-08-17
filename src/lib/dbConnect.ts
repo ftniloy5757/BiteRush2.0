@@ -5,7 +5,7 @@ const MONGODB_URI = process.env.MONGODB_URI;
 
 interface MongooseCache {
   conn: typeof mongoose | null;
-  promise: Promise<typeof mongoose> | null;
+  promise: Promise<typeof mongoose | null> | null;
 }
 
 declare global {
@@ -22,11 +22,10 @@ export const connectDB = async () => {
   const uri = process.env.MONGODB_URI || MONGODB_URI;
 
   if (!uri) {
-    console.warn("MONGODB_URI is missing from environment variables.");
     return null;
   }
 
-  if (cached.conn) {
+  if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
   }
 
@@ -34,10 +33,15 @@ export const connectDB = async () => {
     cached.promise = mongoose
       .connect(uri, {
         bufferCommands: false,
+        serverSelectionTimeoutMS: 4000,
       })
       .then((mongooseInstance) => {
-        console.log("MongoDB connected successfully");
         return mongooseInstance;
+      })
+      .catch((err) => {
+        cached.promise = null;
+        console.warn("MongoDB connection failed, operating with fallback mode:", err?.message || err);
+        return null;
       });
   }
 
@@ -45,7 +49,7 @@ export const connectDB = async () => {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    throw e;
+    return null;
   }
 
   return cached.conn;

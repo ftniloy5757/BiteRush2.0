@@ -7,16 +7,28 @@ import Product from "@/models/Product";
 // GET all products for restaurant management
 export async function GET() {
   try {
-    await connectDB();
+    const conn = await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
-    const products = await Product.find().sort({ createdAt: -1 });
-    return NextResponse.json(products, { status: 200 });
+
+    if (conn) {
+      let products = await Product.find().sort({ createdAt: -1 });
+      if (products.length === 0) {
+        const { seedDemoData } = await import("@/lib/seedDemoUsers");
+        await seedDemoData();
+        products = await Product.find().sort({ createdAt: -1 });
+      }
+      return NextResponse.json(products, { status: 200 });
+    }
+
+    const { INITIAL_PRODUCTS } = await import("@/lib/initialProducts");
+    return NextResponse.json(INITIAL_PRODUCTS, { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
-    return NextResponse.json({ message: "Error fetching products" }, { status: 500 });
+    const { INITIAL_PRODUCTS } = await import("@/lib/initialProducts");
+    return NextResponse.json(INITIAL_PRODUCTS, { status: 200 });
   }
 }
 
