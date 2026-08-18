@@ -21,7 +21,8 @@ if (!global.mongooseCache) {
 export const connectDB = async () => {
   const uri = process.env.MONGODB_URI || MONGODB_URI;
 
-  if (!uri) {
+  // Ignore missing or unconfigured placeholder strings
+  if (!uri || uri.includes("<username>") || uri.includes("<password>") || uri.includes("cluster0.mongodb.net")) {
     return null;
   }
 
@@ -40,7 +41,7 @@ export const connectDB = async () => {
       })
       .catch((err) => {
         cached.promise = null;
-        console.warn("MongoDB connection failed, operating with fallback mode:", err?.message || err);
+        console.warn("MongoDB connection notice:", err?.message || err);
         return null;
       });
   }

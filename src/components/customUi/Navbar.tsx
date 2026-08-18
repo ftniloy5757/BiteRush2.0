@@ -297,7 +297,7 @@ export default function Navbar() {
                 <DropdownMenuSeparator />
 
                 <DropdownMenuItem
-                  onClick={() => signOut({ callbackUrl: "/sign-in" })}
+                  onClick={() => signOut({ callbackUrl: "/" })}
                   className="flex items-center text-xs text-red-500 focus:text-red-500 py-2 cursor-pointer"
                 >
                   <LogOut className="mr-2 h-4 w-4" />

@@ -3,45 +3,9 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
 import User from "@/models/User";
 import connectDB from "@/lib/dbConnect";
+import { DEMO_USERS } from "@/lib/demoData";
 
-const DEMO_USERS_FALLBACK = [
-  {
-    id: "demo_customer_001",
-    firstName: "Alex",
-    lastName: "Customer",
-    contactNumber: "+8801700000001",
-    email: "customer@biterush.com",
-    password: "Password123!",
-    isEmailVerified: true,
-    role: "customer" as const,
-    restaurantName: "",
-    vehicleType: "",
-  },
-  {
-    id: "demo_restaurant_001",
-    firstName: "BiteRush",
-    lastName: "Kitchen",
-    contactNumber: "+8801700000002",
-    email: "restaurant@biterush.com",
-    password: "Password123!",
-    isEmailVerified: true,
-    role: "restaurant" as const,
-    restaurantName: "BiteRush Kitchen",
-    vehicleType: "",
-  },
-  {
-    id: "demo_rider_001",
-    firstName: "Rahim",
-    lastName: "Rider",
-    contactNumber: "+8801700000003",
-    email: "rider@biterush.com",
-    password: "Password123!",
-    isEmailVerified: true,
-    role: "rider" as const,
-    restaurantName: "",
-    vehicleType: "Motorcycle",
-  },
-];
+const DEMO_USERS_FALLBACK = DEMO_USERS;
 
 export const authOptions: NextAuthOptions = {
   providers: [

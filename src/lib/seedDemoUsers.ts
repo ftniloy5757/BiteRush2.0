@@ -131,8 +131,19 @@ const demoProducts = [
   },
 ];
 
+import mongoose from "mongoose";
+import { DEMO_USERS, DEMO_IDS } from "@/lib/demoData";
+
 export async function seedDemoData() {
-  await connectDB();
+  const conn = await connectDB();
+  if (!conn || mongoose.connection.readyState !== 1) {
+    return {
+      users: DEMO_USERS.map((u) => ({ email: u.email, role: u.role, name: `${u.firstName} ${u.lastName}` })),
+      productsCount: 6,
+      ordersCount: 6,
+      fallbackMode: true,
+    };
+  }
 
   // 1. Seed or Update Demo Users
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
