@@ -23,20 +23,27 @@ export async function POST(request: NextRequest) {
         }
       );
 
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: process.env.GMAIL_USER,
-          pass: process.env.GMAIL_PASSWORD,
-        },
-      });
+      const emailUser = process.env.EMAIL_NAME || process.env.GMAIL_USER;
+      const emailPass = process.env.EMAIL_PASS || process.env.GMAIL_PASSWORD;
 
-      await transporter.sendMail({
-        from: process.env.GMAIL_USER,
-        to: email,
-        subject: "Your OTP Code",
-        text: `Your OTP for email verification is ${emailOtp}`,
-      });
+      if (emailUser && emailPass) {
+        const transporter = nodemailer.createTransport({
+          service: "gmail",
+          auth: {
+            user: emailUser,
+            pass: emailPass,
+          },
+        });
+
+        await transporter.sendMail({
+          from: emailUser,
+          to: email,
+          subject: "Your OTP Code",
+          text: `Your OTP for email verification is ${emailOtp}`,
+        });
+      } else {
+        console.log(`[Dev Mode] OTP for ${email}: ${emailOtp}`);
+      }
     } else if (type === "phone") {
       const phoneOtp = Math.floor(1000 + Math.random() * 9000).toString();
       const phoneOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes

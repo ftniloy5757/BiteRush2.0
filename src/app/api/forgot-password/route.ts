@@ -26,26 +26,29 @@ export async function POST(request: NextRequest) {
     user.resetTokenExpiry = resetTokenExpiry;
     await user.save();
 
-    // Set up email transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_NAME,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    // Send reset email if credentials configured, otherwise log in dev mode
+    if (process.env.EMAIL_NAME && process.env.EMAIL_PASS) {
+      const transporter = nodemailer.createTransport({
+        service: "gmail",
+        auth: {
+          user: process.env.EMAIL_NAME,
+          pass: process.env.EMAIL_PASS,
+        },
+      });
 
-    // Send reset email
-    await transporter.sendMail({
-      from: process.env.EMAIL_NAME,
-      to: user.email,
-      subject: "Password Reset",
-      html: `
-        <p>You requested a password reset. Click the link below to reset your password:</p>
-        <a href="${process.env.BASEURL}/reset-password?token=${resetToken}">Reset Password</a>
-        <p>This link will expire in 1 hour.</p>
-      `,
-    });
+      await transporter.sendMail({
+        from: process.env.EMAIL_NAME,
+        to: user.email,
+        subject: "Password Reset",
+        html: `
+          <p>You requested a password reset. Click the link below to reset your password:</p>
+          <a href="${process.env.BASEURL || "http://localhost:3000"}/reset-password?token=${resetToken}">Reset Password</a>
+          <p>This link will expire in 1 hour.</p>
+        `,
+      });
+    } else {
+      console.log(`[Dev Mode] Password reset link for ${user.email}: ${process.env.BASEURL || "http://localhost:3000"}/reset-password?token=${resetToken}`);
+    }
 
     return NextResponse.json(
       { message: "Password reset email sent" },
