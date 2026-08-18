@@ -122,6 +122,11 @@ function MenuList() {
   };
 
   const addToCart = (product: Product) => {
+    if (!session) {
+      router.push("/sign-in?redirect=/menu");
+      return;
+    }
+
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingIndex = cart.findIndex((item: any) => item._id === product._id);
 
@@ -272,9 +277,13 @@ function MenuList() {
                         <>
                           <Check className="h-3.5 w-3.5" /> Added
                         </>
-                      ) : (
+                      ) : session ? (
                         <>
                           <Plus className="h-3.5 w-3.5" /> Add
+                        </>
+                      ) : (
+                        <>
+                          <span>Order Now</span>
                         </>
                       )}
                     </button>
@@ -286,16 +295,18 @@ function MenuList() {
         </div>
       )}
 
-      {/* Floating View Cart Button */}
-      <div className="fixed bottom-6 right-6 z-40">
-        <Link
-          href={session ? "/cart" : "/sign-in?redirect=/cart"}
-          className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-full shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
-        >
-          <ShoppingBag className="h-5 w-5" />
-          <span>View Cart</span>
-        </Link>
-      </div>
+      {/* Floating View Cart Button (Only for Authenticated Customers) */}
+      {session && session.user?.role === "customer" && (
+        <div className="fixed bottom-6 right-6 z-40">
+          <Link
+            href="/cart"
+            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-full shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+          >
+            <ShoppingBag className="h-5 w-5" />
+            <span>View Cart</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }

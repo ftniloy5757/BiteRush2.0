@@ -1,9 +1,9 @@
 "use client";
 
-import { signIn, useSession } from "next-auth/react";
+import { signIn } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Utensils, Mail, Lock, ArrowRight, Eye, EyeOff, Sparkles } from "lucide-react";
+import { Utensils, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,19 @@ function SignInForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const redirectUrl = searchParams.get("redirect") || "/dashboard";
 
-  // Pre-seed demo data on background to ensure database is always ready
+  // Determine target redirect URL
+  let targetUrl = searchParams.get("redirect") || searchParams.get("callbackUrl") || "/dashboard";
+  try {
+    if (targetUrl.startsWith("http")) {
+      targetUrl = new URL(targetUrl).pathname;
+    }
+  } catch {}
+  if (!targetUrl.startsWith("/") || targetUrl === "/sign-in" || targetUrl === "/sign-up") {
+    targetUrl = "/dashboard";
+  }
+
+  // Pre-seed demo data in background to ensure database is always ready
   useEffect(() => {
     fetch("/api/seed", { method: "POST" }).catch(() => {});
   }, []);
@@ -54,7 +64,8 @@ function SignInForm() {
         } else if (role === "rider") {
           router.push("/rider");
         } else {
-          router.push(redirectUrl);
+          // Redirect to the originally intended destination (e.g. /menu or /cart)
+          router.push(targetUrl);
         }
       }
     } catch (err) {
