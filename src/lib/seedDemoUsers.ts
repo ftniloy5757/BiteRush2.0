@@ -8,6 +8,7 @@ const DEMO_PASSWORD = "Password123!";
 
 const demoUsers = [
   {
+    _id: DEMO_IDS.CUSTOMER,
     firstName: "Alex",
     lastName: "Customer",
     email: "customer@biterush.com",
@@ -20,6 +21,7 @@ const demoUsers = [
     themePreference: "light" as const,
   },
   {
+    _id: DEMO_IDS.RESTAURANT,
     firstName: "BiteRush",
     lastName: "Kitchen",
     email: "restaurant@biterush.com",
@@ -34,6 +36,7 @@ const demoUsers = [
     themePreference: "light" as const,
   },
   {
+    _id: DEMO_IDS.RIDER,
     firstName: "Rahim",
     lastName: "Rider",
     email: "rider@biterush.com",
