@@ -40,6 +40,42 @@ interface ActiveOrder {
   createdAt: string;
 }
 
+const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
+  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+  pizza: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
+  pasta: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
+  dessert: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
+  drink: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
+  default: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+};
+
+function DishImage({ src, alt, category, name }: { src: string; alt: string; category?: string; name?: string }) {
+  const defaultFallback = FALLBACK_CATEGORY_IMAGES[category || "default"] || FALLBACK_CATEGORY_IMAGES.default;
+  const initialSrc = src && src.startsWith("http") ? src : defaultFallback;
+  const [currentSrc, setCurrentSrc] = useState(initialSrc);
+
+  useEffect(() => {
+    if (src && src.startsWith("http")) {
+      setCurrentSrc(src);
+    } else {
+      setCurrentSrc(defaultFallback);
+    }
+  }, [src, defaultFallback]);
+
+  return (
+    <Image
+      src={currentSrc}
+      alt={alt}
+      fill
+      unoptimized
+      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      onError={() => {
+        setCurrentSrc(defaultFallback);
+      }}
+    />
+  );
+}
+
 export default function DashboardGreeting() {
   const { data: session, status } = useSession();
   const [chatbotVisible, setChatbotVisible] = useState(false);
@@ -250,11 +286,11 @@ export default function DashboardGreeting() {
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col justify-between transition-all group"
               >
                 <div className="relative h-44 w-full bg-gray-100">
-                  <Image
+                  <DishImage
                     src={product.image}
                     alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    category={product.category}
+                    name={product.name}
                   />
                   <span className="absolute top-2.5 left-2.5 bg-orange-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
                     ✨ Recommended
@@ -328,11 +364,11 @@ export default function DashboardGreeting() {
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm hover:shadow-md border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col justify-between transition-all group"
               >
                 <div className="relative h-44 w-full bg-gray-100">
-                  <Image
+                  <DishImage
                     src={product.image}
                     alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    category={product.category}
+                    name={product.name}
                   />
                   <span className="absolute top-2.5 left-2.5 bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full shadow">
                     🔥 Popular

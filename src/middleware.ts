@@ -25,13 +25,24 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(signInUrl);
     }
   } else {
+    const userRole = token.role as string;
+
+    // Authenticated user accessing root homepage ("/") -> Redirect to role dashboard
+    if (url.pathname === "/") {
+      if (userRole === "restaurant") {
+        return NextResponse.redirect(new URL("/restaurant", request.url));
+      } else if (userRole === "rider") {
+        return NextResponse.redirect(new URL("/rider", request.url));
+      }
+      return NextResponse.redirect(new URL("/dashboard", request.url));
+    }
+
     // Authenticated user trying to access auth pages -> Redirect to appropriate dashboard
     if (
       url.pathname.startsWith("/sign-in") ||
       url.pathname.startsWith("/sign-up") ||
       url.pathname.startsWith("/verify")
     ) {
-      const userRole = token.role as string;
       if (userRole === "restaurant") {
         return NextResponse.redirect(new URL("/restaurant", request.url));
       } else if (userRole === "rider") {
@@ -41,8 +52,6 @@ export async function middleware(request: NextRequest) {
     }
 
     // Role-based access control
-    const userRole = token.role as string;
-
     // Protect restaurant routes - only allow restaurant role
     if (url.pathname.startsWith("/restaurant") && userRole !== "restaurant") {
       return NextResponse.redirect(new URL("/dashboard", request.url));
@@ -60,6 +69,7 @@ export async function middleware(request: NextRequest) {
 // Config for protected paths
 export const config = {
   matcher: [
+    "/",
     "/sign-in",
     "/sign-up",
     "/verify/:path*",

@@ -10,6 +10,42 @@ import { INITIAL_PRODUCTS, ProductItem } from "@/lib/initialProducts";
 
 type Product = ProductItem;
 
+const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
+  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+  pizza: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
+  pasta: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
+  dessert: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
+  drink: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
+  default: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+};
+
+function DishImage({ src, alt, category, name }: { src: string; alt: string; category?: string; name?: string }) {
+  const defaultFallback = FALLBACK_CATEGORY_IMAGES[category || "default"] || FALLBACK_CATEGORY_IMAGES.default;
+  const initialSrc = src && src.startsWith("http") ? src : defaultFallback;
+  const [currentSrc, setCurrentSrc] = useState(initialSrc);
+
+  useEffect(() => {
+    if (src && src.startsWith("http")) {
+      setCurrentSrc(src);
+    } else {
+      setCurrentSrc(defaultFallback);
+    }
+  }, [src, defaultFallback]);
+
+  return (
+    <Image
+      src={currentSrc}
+      alt={alt}
+      fill
+      unoptimized
+      className="object-cover group-hover:scale-105 transition-transform duration-300"
+      onError={() => {
+        setCurrentSrc(defaultFallback);
+      }}
+    />
+  );
+}
+
 function MenuList() {
   const { data: session } = useSession();
   const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
@@ -214,11 +250,11 @@ function MenuList() {
                 className="bg-white dark:bg-gray-900 rounded-3xl overflow-hidden border border-gray-200 dark:border-gray-800 shadow-sm hover:shadow-lg transition-all flex flex-col justify-between group"
               >
                 <div className="relative h-48 sm:h-52 w-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
-                  <Image
-                    src={product.image || "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=400&fit=crop"}
+                  <DishImage
+                    src={product.image}
                     alt={product.name}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-300"
+                    category={product.category}
+                    name={product.name}
                   />
                   {product.featured && (
                     <span className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-amber-500 text-white text-[10px] font-extrabold px-2.5 py-1 rounded-full shadow-md flex items-center gap-1">

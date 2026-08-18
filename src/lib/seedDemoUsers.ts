@@ -9,8 +9,8 @@ const DEMO_PASSWORD = "Password123!";
 const demoUsers = [
   {
     _id: DEMO_IDS.CUSTOMER,
-    firstName: "Alex",
-    lastName: "Customer",
+    firstName: "Niloy",
+    lastName: "Farhan",
     email: "customer@biterush.com",
     contactNumber: "+8801700000001",
     role: "customer" as const,
@@ -37,8 +37,8 @@ const demoUsers = [
   },
   {
     _id: DEMO_IDS.RIDER,
-    firstName: "Rahim",
-    lastName: "Rider",
+    firstName: "Zayed",
+    lastName: "Masum",
     email: "rider@biterush.com",
     contactNumber: "+8801700000003",
     role: "rider" as const,
@@ -176,16 +176,8 @@ export async function seedDemoData() {
   }
 
   // 2. Seed or Sync Products (Clean 6-item menu)
-  const existingProductsCount = await Product.countDocuments();
-  let products = [];
-
-  if (existingProductsCount === 0 || existingProductsCount > 10) {
-    // Clean and reset to the 6 curated readymade products
-    await Product.deleteMany({});
-    products = await Product.insertMany(demoProducts);
-  } else {
-    products = await Product.find({});
-  }
+  await Product.deleteMany({});
+  const products = await Product.insertMany(demoProducts);
 
   // 3. Seed Realistic Multi-State Orders for all test profiles
   const customer = createdUsers["customer"];

@@ -5,6 +5,15 @@ import { authOptions } from "../auth/[...nextauth]/option";
 import Product from "@/models/Product";
 import { INITIAL_PRODUCTS } from "@/lib/initialProducts";
 
+const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
+  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+  pizza: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
+  pasta: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
+  dessert: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
+  drink: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
+  default: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=450&fit=crop",
+};
+
 // GET all products with optional filtering (with guaranteed fallback)
 export async function GET(req: NextRequest) {
   try {
@@ -30,14 +39,32 @@ export async function GET(req: NextRequest) {
 
       let products = await Product.find(filter).sort({ createdAt: -1 });
 
-      if (products.length === 0 && (!category || category === "all")) {
-        const { seedDemoData } = await import("@/lib/seedDemoUsers");
-        await seedDemoData();
-        products = await Product.find(filter).sort({ createdAt: -1 });
+      // If database contains legacy items with broken image links, reseed cleanly
+      if (
+        products.length === 0 ||
+        products.some((p) => !p.image || !p.image.startsWith("http") || p.image.includes("/uploads/"))
+      ) {
+        try {
+          const { seedDemoData } = await import("@/lib/seedDemoUsers");
+          await seedDemoData();
+          products = await Product.find(filter).sort({ createdAt: -1 });
+        } catch {
+          // Continue if seeding encounters an issue
+        }
       }
 
       if (products.length > 0) {
-        return NextResponse.json(products, { status: 200 });
+        // Guarantee all items have working images
+        const sanitizedProducts = products.map((p) => {
+          const prodObj = p.toObject ? p.toObject() : p;
+          if (!prodObj.image || !prodObj.image.startsWith("http")) {
+            prodObj.image =
+              CATEGORY_DEFAULT_IMAGES[prodObj.category] || CATEGORY_DEFAULT_IMAGES.default;
+          }
+          return prodObj;
+        });
+
+        return NextResponse.json(sanitizedProducts, { status: 200 });
       }
     }
 

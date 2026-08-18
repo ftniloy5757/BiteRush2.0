@@ -1,8 +1,20 @@
 import Image from "next/image";
 import Link from "next/link";
+import { getServerSession } from "next-auth/next";
+import { redirect } from "next/navigation";
+import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import { Utensils, Sparkles, Clock, ShieldCheck, Star, ArrowRight, HeartHandshake, Flame, MapPin } from "lucide-react";
 
-export default function Home() {
+export default async function Home() {
+  const session = await getServerSession(authOptions);
+  if (session) {
+    if (session.user?.role === "restaurant") {
+      redirect("/restaurant");
+    } else if (session.user?.role === "rider") {
+      redirect("/rider");
+    }
+    redirect("/dashboard");
+  }
   return (
     <div className="space-y-16 pb-16">
       {/* Hero Banner */}

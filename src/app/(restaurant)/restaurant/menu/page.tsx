@@ -25,6 +25,42 @@ const emptyProduct = {
   image: "", rating: 0, inStock: true, isAvailable: true, featured: false, prepTime: "15-20 min",
 };
 
+const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
+  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+  pizza: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
+  pasta: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
+  dessert: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
+  drink: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
+  default: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
+};
+
+function DishImage({ src, alt, category, name }: { src: string; alt: string; category?: string; name?: string }) {
+  const defaultFallback = FALLBACK_CATEGORY_IMAGES[category || "default"] || FALLBACK_CATEGORY_IMAGES.default;
+  const initialSrc = src && src.startsWith("http") ? src : defaultFallback;
+  const [currentSrc, setCurrentSrc] = useState(initialSrc);
+
+  useEffect(() => {
+    if (src && src.startsWith("http")) {
+      setCurrentSrc(src);
+    } else {
+      setCurrentSrc(defaultFallback);
+    }
+  }, [src, defaultFallback]);
+
+  return (
+    <Image
+      src={currentSrc}
+      alt={alt}
+      fill
+      unoptimized
+      className="object-cover"
+      onError={() => {
+        setCurrentSrc(defaultFallback);
+      }}
+    />
+  );
+}
+
 export default function RestaurantMenuPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -193,7 +229,12 @@ export default function RestaurantMenuPage() {
         {products.map((product) => (
           <div key={product._id} className={`bg-white dark:bg-gray-900 rounded-xl shadow-md border overflow-hidden transition-all ${!product.isAvailable ? "opacity-60" : ""} ${product.isAvailable ? "border-gray-200 dark:border-gray-800" : "border-red-300 dark:border-red-800"}`}>
             <div className="relative h-40">
-              <Image src={product.image} alt={product.name} fill className="object-cover" />
+              <DishImage
+                src={product.image}
+                alt={product.name}
+                category={product.category}
+                name={product.name}
+              />
               {product.featured && (
                 <span className="absolute top-2 left-2 bg-yellow-500 text-white text-xs font-bold px-2 py-1 rounded">⭐ Featured</span>
               )}
