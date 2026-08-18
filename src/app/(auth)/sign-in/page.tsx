@@ -37,7 +37,11 @@ function SignInForm() {
       });
 
       if (result?.error) {
-        setError(result.error);
+        if (result.error === "CredentialsSignin") {
+          setError("Invalid email or password. Please verify your credentials and try again.");
+        } else {
+          setError(result.error);
+        }
         setIsSubmitting(false);
       } else {
         // Fetch session to determine role-based redirect
