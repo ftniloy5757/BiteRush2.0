@@ -1,9 +1,11 @@
+// src/app/api/orders/[id]/rate/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
 import { getDynamicOrderById, addDynamicOrderRating } from "@/lib/dynamicOrdersStore";
+import { CryptoService } from "@/lib/crypto/cryptoService";
 
 // POST submit rating
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -20,6 +22,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ message: "Rating must be between 1 and 5" }, { status: 400 });
     }
 
+    // Encrypt review text via Asymmetric ECC while keeping rating numeric plaintext
+    const reviewEncrypted = review ? CryptoService.encryptReview(review.trim()) : undefined;
+
     // Update dynamic store
     addDynamicOrderRating(id, rating, review);
 
@@ -30,6 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (order) {
           order.rating = rating;
           order.review = review || "";
+          order.reviewEncrypted = reviewEncrypted;
           order.ratedAt = new Date();
           await order.save();
           return NextResponse.json({ success: true, order }, { status: 200 });

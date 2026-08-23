@@ -4,6 +4,7 @@ import bcrypt from "bcryptjs";
 import User from "@/models/User";
 import connectDB from "@/lib/dbConnect";
 import { DEMO_USERS } from "@/lib/demoData";
+import { CryptoService } from "@/lib/crypto/cryptoService";
 
 const DEMO_USERS_FALLBACK = DEMO_USERS;
 
@@ -22,8 +23,13 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
-          const identifier = credentials.identifier.trim().toLowerCase();
+          const rawIdentifier = credentials.identifier.trim();
+          const normalizedEmail = rawIdentifier.toLowerCase();
           const rawPassword = credentials.password;
+
+          // Compute deterministic HMAC lookup tokens
+          const emailLookupHmac = CryptoService.createEmailLookupHmac(normalizedEmail);
+          const phoneLookupHmac = CryptoService.createPhoneLookupHmac(rawIdentifier);
 
           // 1. Try Authenticating against MongoDB database
           try {
@@ -31,8 +37,10 @@ export const authOptions: NextAuthOptions = {
             if (conn) {
               let user = await User.findOne({
                 $or: [
-                  { email: identifier },
-                  { contactNumber: identifier },
+                  { emailLookupHmac },
+                  { contactNumberLookupHmac: phoneLookupHmac },
+                  { email: normalizedEmail },
+                  { contactNumber: rawIdentifier },
                 ],
               });
 
@@ -43,8 +51,10 @@ export const authOptions: NextAuthOptions = {
                   await seedDemoData();
                   user = await User.findOne({
                     $or: [
-                      { email: identifier },
-                      { contactNumber: identifier },
+                      { emailLookupHmac },
+                      { contactNumberLookupHmac: phoneLookupHmac },
+                      { email: normalizedEmail },
+                      { contactNumber: rawIdentifier },
                     ],
                   });
                 } catch {
@@ -59,16 +69,36 @@ export const authOptions: NextAuthOptions = {
                 );
 
                 if (isPasswordCorrect) {
+                  // Transparently decrypt RSA-encrypted profile fields for the active session
+                  const decryptedFirstName = user.firstNameEncrypted
+                    ? CryptoService.decryptProfile(user.firstNameEncrypted)
+                    : user.firstName;
+                  const decryptedLastName = user.lastNameEncrypted
+                    ? CryptoService.decryptProfile(user.lastNameEncrypted)
+                    : user.lastName;
+                  const decryptedEmail = user.emailEncrypted
+                    ? CryptoService.decryptProfile(user.emailEncrypted)
+                    : user.email;
+                  const decryptedContact = user.contactNumberEncrypted
+                    ? CryptoService.decryptProfile(user.contactNumberEncrypted)
+                    : user.contactNumber || "";
+                  const decryptedRestaurant = user.restaurantNameEncrypted
+                    ? CryptoService.decryptProfile(user.restaurantNameEncrypted)
+                    : user.restaurantName || "";
+                  const decryptedVehicle = user.vehicleTypeEncrypted
+                    ? CryptoService.decryptProfile(user.vehicleTypeEncrypted)
+                    : user.vehicleType || "";
+
                   return {
                     id: user._id.toString(),
-                    firstName: user.firstName,
-                    lastName: user.lastName,
-                    contactNumber: user.contactNumber || "",
-                    email: user.email,
+                    firstName: decryptedFirstName,
+                    lastName: decryptedLastName,
+                    contactNumber: decryptedContact,
+                    email: decryptedEmail,
                     isEmailVerified: user.isEmailVerified !== false,
                     role: user.role || "customer",
-                    restaurantName: user.restaurantName || "",
-                    vehicleType: user.vehicleType || "",
+                    restaurantName: decryptedRestaurant,
+                    vehicleType: decryptedVehicle,
                   };
                 }
               }
@@ -80,7 +110,7 @@ export const authOptions: NextAuthOptions = {
           // 2. Fallback Authentication for Pre-Configured Demo Test Accounts
           const matchedDemoUser = DEMO_USERS_FALLBACK.find(
             (u) =>
-              (u.email.toLowerCase() === identifier || u.contactNumber === identifier) &&
+              (u.email.toLowerCase() === normalizedEmail || u.contactNumber === rawIdentifier) &&
               u.password === rawPassword
           );
 

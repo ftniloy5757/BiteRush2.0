@@ -3,6 +3,8 @@ import User from "@/models/User";
 import Product from "@/models/Product";
 import Order from "@/models/Order";
 import connectDB from "@/lib/dbConnect";
+import { CryptoService } from "@/lib/crypto/cryptoService";
+import { KeyManager } from "@/lib/crypto/keyManager";
 
 const DEMO_PASSWORD = "Password123!";
 
@@ -153,10 +155,33 @@ export async function seedDemoData() {
   const createdUsers: Record<string, any> = {};
 
   for (const userData of demoUsers) {
-    let user = await User.findOne({ email: userData.email });
+    const emailLookupHmac = CryptoService.createEmailLookupHmac(userData.email);
+    const contactNumberLookupHmac = CryptoService.createPhoneLookupHmac(userData.contactNumber);
+
+    const cryptoFields = {
+      firstNameEncrypted: CryptoService.encryptProfile(userData.firstName),
+      lastNameEncrypted: CryptoService.encryptProfile(userData.lastName),
+      emailEncrypted: CryptoService.encryptProfile(userData.email),
+      contactNumberEncrypted: CryptoService.encryptProfile(userData.contactNumber),
+      bioEncrypted: userData.bio ? CryptoService.encryptProfile(userData.bio) : undefined,
+      restaurantNameEncrypted: userData.restaurantName ? CryptoService.encryptProfile(userData.restaurantName) : undefined,
+      restaurantAddressEncrypted: userData.restaurantAddress ? CryptoService.encryptProfile(userData.restaurantAddress) : undefined,
+      vehicleTypeEncrypted: userData.vehicleType ? CryptoService.encryptProfile(userData.vehicleType) : undefined,
+      emailLookupHmac,
+      contactNumberLookupHmac,
+      isTwoFactorEnabled: true,
+      isTwoFactorVerified: true,
+      cryptoVersion: KeyManager.getActiveVersion(),
+    };
+
+    let user = await User.findOne({
+      $or: [{ emailLookupHmac }, { email: userData.email }],
+    });
+
     if (!user) {
       user = await User.create({
         ...userData,
+        ...cryptoFields,
         passwordHash,
       });
     } else {
@@ -166,6 +191,7 @@ export async function seedDemoData() {
       user.passwordHash = passwordHash;
       user.isEmailVerified = true;
       user.isPhoneVerified = true;
+      Object.assign(user, cryptoFields);
       if (userData.restaurantName) user.restaurantName = userData.restaurantName;
       if (userData.restaurantAddress) user.restaurantAddress = userData.restaurantAddress;
       if (userData.vehicleType) user.vehicleType = userData.vehicleType;
@@ -414,7 +440,7 @@ export async function seedDemoData() {
       rider: rider._id,
       supportTickets: [
         {
-          subject: "Missing extra dip sauces",
+          issueType: "Missing extra dip sauces",
           message: "Hi, I ordered extra garlic ranch dips with the pizza but they were not in the parcel bag.",
           status: "open",
           createdAt: new Date(now.getTime() - 90 * 60 * 1000),

@@ -8,7 +8,7 @@ declare module "next-auth" {
     contactNumber?: string;
     email?: string;
     isEmailVerified?: boolean;
-    role?: "customer" | "restaurant" | "rider";
+    role?: "customer" | "restaurant" | "rider" | "admin";
     restaurantName?: string;
     vehicleType?: string;
   }
@@ -21,7 +21,7 @@ declare module "next-auth" {
       contactNumber?: string;
       email?: string;
       isEmailVerified?: boolean;
-      role?: "customer" | "restaurant" | "rider";
+      role?: "customer" | "restaurant" | "rider" | "admin";
       profilePicture?: string;
       restaurantName?: string;
       vehicleType?: string;
@@ -37,7 +37,7 @@ declare module "next-auth/jwt" {
     contactNumber?: string;
     email?: string;
     isEmailVerified?: boolean;
-    role?: "customer" | "restaurant" | "rider";
+    role?: "customer" | "restaurant" | "rider" | "admin";
     profilePicture?: string;
     restaurantName?: string;
     vehicleType?: string;

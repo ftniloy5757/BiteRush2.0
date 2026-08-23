@@ -1,9 +1,10 @@
+// src/models/Order.ts
 import mongoose, { Schema, Document } from "mongoose";
 import { IUser } from "./User";
 import { IProduct } from "./Product";
 
 export interface OrderItem {
-  product: mongoose.Types.ObjectId | IProduct;
+  product: mongoose.Types.ObjectId | IProduct | string;
   name: string;
   quantity: number;
   image: string;
@@ -22,14 +23,17 @@ export interface ChatMessage {
   senderRole: "customer" | "rider" | "restaurant";
   senderName: string;
   text: string;
+  textEncrypted?: string;
   createdAt: Date;
 }
 
 export interface SupportTicket {
   issueType: string;
   message: string;
+  messageEncrypted?: string;
   status: "open" | "resolved";
   response?: string;
+  responseEncrypted?: string;
   createdAt: Date;
   resolvedAt?: Date;
 }
@@ -38,9 +42,11 @@ export interface IOrder extends Document {
   user: mongoose.Types.ObjectId | IUser;
   orderItems: OrderItem[];
   shippingAddress: ShippingAddress;
+  shippingAddressEncrypted?: string;
   paymentMethod: string;
   deliveryMethod: string;
   deliveryInstructions?: string;
+  deliveryInstructionsEncrypted?: string;
   itemsPrice: number;
   taxPrice: number;
   shippingPrice: number;
@@ -55,6 +61,7 @@ export interface IOrder extends Document {
   // Rating & review
   rating?: number;
   review?: string;
+  reviewEncrypted?: string;
   ratedAt?: Date;
   // Timing
   estimatedDeliveryMinutes?: number;
@@ -64,6 +71,9 @@ export interface IOrder extends Document {
   messages: ChatMessage[];
   // Support tickets
   supportTickets: SupportTicket[];
+  // Cryptography metadata
+  cryptoVersion: number;
+  integrityMac?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -95,6 +105,7 @@ const orderSchema = new Schema<IOrder>(
       area: { type: String, required: true },
       details: { type: String },
     },
+    shippingAddressEncrypted: String,
     paymentMethod: {
       type: String,
       required: true,
@@ -106,6 +117,7 @@ const orderSchema = new Schema<IOrder>(
       enum: ["Saver", "Standard", "Priority"],
     },
     deliveryInstructions: { type: String },
+    deliveryInstructionsEncrypted: String,
     itemsPrice: {
       type: Number,
       required: true,
@@ -160,6 +172,7 @@ const orderSchema = new Schema<IOrder>(
     // Rating & review
     rating: { type: Number, min: 1, max: 5 },
     review: { type: String },
+    reviewEncrypted: String,
     ratedAt: { type: Date },
     // Timing
     estimatedDeliveryMinutes: { type: Number },
@@ -171,6 +184,7 @@ const orderSchema = new Schema<IOrder>(
         senderRole: { type: String, enum: ["customer", "rider", "restaurant"], required: true },
         senderName: { type: String, required: true },
         text: { type: String, required: true },
+        textEncrypted: String,
         createdAt: { type: Date, default: Date.now },
       },
     ],
@@ -179,12 +193,16 @@ const orderSchema = new Schema<IOrder>(
       {
         issueType: { type: String, required: true },
         message: { type: String, required: true },
+        messageEncrypted: String,
         status: { type: String, enum: ["open", "resolved"], default: "open" },
         response: { type: String },
+        responseEncrypted: String,
         createdAt: { type: Date, default: Date.now },
         resolvedAt: { type: Date },
       },
     ],
+    cryptoVersion: { type: Number, default: 1 },
+    integrityMac: String,
   },
   {
     timestamps: true,

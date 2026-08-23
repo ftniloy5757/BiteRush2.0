@@ -1,3 +1,4 @@
+// src/app/api/orders/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
@@ -5,6 +6,33 @@ import Order from "@/models/Order";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../../auth/[...nextauth]/option";
 import { getDynamicOrderById, updateDynamicOrderStatus } from "@/lib/dynamicOrdersStore";
+import { CryptoService } from "@/lib/crypto/cryptoService";
+
+function decryptOrderPayload(orderObj: any) {
+  if (!orderObj) return orderObj;
+  const o = typeof orderObj.toObject === "function" ? orderObj.toObject() : { ...orderObj };
+
+  if (o.shippingAddressEncrypted) {
+    try {
+      const decryptedAddrJson = CryptoService.decryptOrderField(o.shippingAddressEncrypted);
+      if (decryptedAddrJson.startsWith("{")) {
+        o.shippingAddress = JSON.parse(decryptedAddrJson);
+      }
+    } catch (err) {
+      console.warn("Failed decrypting order shipping address:", err);
+    }
+  }
+
+  if (o.deliveryInstructionsEncrypted) {
+    o.deliveryInstructions = CryptoService.decryptOrderField(o.deliveryInstructionsEncrypted);
+  }
+
+  if (o.reviewEncrypted) {
+    o.review = CryptoService.decryptReview(o.reviewEncrypted);
+  }
+
+  return o;
+}
 
 export async function GET(
   req: NextRequest,
@@ -26,7 +54,19 @@ export async function GET(
           .populate("orderItems.product");
 
         if (order) {
-          return NextResponse.json({ order }, { status: 200 });
+          // RBAC Authorization Check
+          const userId = session.user.id;
+          const userRole = session.user.role;
+          const isOwner = order.user?._id?.toString() === userId || order.user?.toString() === userId;
+          const isAssignedRider = order.rider?._id?.toString() === userId || order.rider?.toString() === userId;
+          const isRestaurant = userRole === "restaurant" || userRole === "admin";
+
+          if (!isOwner && !isAssignedRider && !isRestaurant) {
+            return NextResponse.json({ message: "Forbidden: Not authorized to view this order" }, { status: 403 });
+          }
+
+          const decryptedOrder = decryptOrderPayload(order);
+          return NextResponse.json({ order: decryptedOrder }, { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB lookup error for order [id], searching dynamic store:", dbErr);

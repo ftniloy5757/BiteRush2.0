@@ -1,3 +1,4 @@
+// src/app/api/orders/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import mongoose from "mongoose";
@@ -6,6 +7,38 @@ import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../auth/[...nextauth]/option";
 import { DEMO_IDS } from "@/lib/demoData";
 import { getDynamicOrders, addDynamicOrder } from "@/lib/dynamicOrdersStore";
+import { CryptoService } from "@/lib/crypto/cryptoService";
+import { KeyManager } from "@/lib/crypto/keyManager";
+
+// Helper to decrypt order fields for permitted roles
+function decryptOrderFields(orderObj: any, role?: string) {
+  if (!orderObj) return orderObj;
+  const o = typeof orderObj.toObject === "function" ? orderObj.toObject() : { ...orderObj };
+
+  // Decrypt shipping address if ECC encrypted
+  if (o.shippingAddressEncrypted) {
+    try {
+      const decryptedAddrJson = CryptoService.decryptOrderField(o.shippingAddressEncrypted);
+      if (decryptedAddrJson.startsWith("{")) {
+        o.shippingAddress = JSON.parse(decryptedAddrJson);
+      }
+    } catch (err) {
+      console.warn("Failed decrypting order shipping address:", err);
+    }
+  }
+
+  // Decrypt delivery instructions
+  if (o.deliveryInstructionsEncrypted) {
+    o.deliveryInstructions = CryptoService.decryptOrderField(o.deliveryInstructionsEncrypted);
+  }
+
+  // Decrypt review if present
+  if (o.reviewEncrypted) {
+    o.review = CryptoService.decryptReview(o.reviewEncrypted);
+  }
+
+  return o;
+}
 
 // GET user orders
 export async function GET(req: NextRequest) {
@@ -35,7 +68,10 @@ export async function GET(req: NextRequest) {
           .limit(limit);
 
         if (orders.length > 0) {
-          return NextResponse.json({ orders }, { status: 200 });
+          const decryptedOrders = orders.map((ord) =>
+            decryptOrderFields(ord, session.user.role)
+          );
+          return NextResponse.json({ orders: decryptedOrders }, { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB query error in orders API, serving dynamic fallback:", dbErr);
@@ -86,6 +122,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "No order items" }, { status: 400 });
     }
 
+    // 1. Asymmetric ECC Encryption of sensitive delivery data
+    const shippingAddressJson = JSON.stringify(shippingAddress);
+    const shippingAddressEncrypted = CryptoService.encryptOrderField(shippingAddressJson);
+    const deliveryInstructionsEncrypted = deliveryInstructions
+      ? CryptoService.encryptOrderField(deliveryInstructions)
+      : undefined;
+
+    // 2. Data Integrity MAC
+    const integrityMac = CryptoService.generateIntegrityMac({
+      userId: session.user.id,
+      totalPrice,
+      itemsPrice,
+      paymentMethod,
+    });
+
     const dynamicCreated = addDynamicOrder({
       user: {
         _id: session.user.id || DEMO_IDS.CUSTOMER,
@@ -112,10 +163,12 @@ export async function POST(req: NextRequest) {
         const order = new Order({
           user: session.user.id,
           orderItems,
-          shippingAddress,
+          shippingAddress, // kept for structured reference
+          shippingAddressEncrypted,
           paymentMethod,
           deliveryMethod,
           deliveryInstructions,
+          deliveryInstructionsEncrypted,
           itemsPrice,
           shippingPrice,
           tipAmount: tipAmount || 0,
@@ -126,10 +179,13 @@ export async function POST(req: NextRequest) {
             paymentMethod === "Bkash" || paymentMethod === "Card or Debit Card"
               ? new Date()
               : undefined,
+          cryptoVersion: KeyManager.getActiveVersion(),
+          integrityMac,
         });
 
         const createdOrder = await order.save();
-        return NextResponse.json({ order: createdOrder }, { status: 201 });
+        const decryptedResponse = decryptOrderFields(createdOrder, session.user.role);
+        return NextResponse.json({ order: decryptedResponse }, { status: 201 });
       } catch (dbErr) {
         console.warn("DB save order error, returning dynamic order:", dbErr);
       }
