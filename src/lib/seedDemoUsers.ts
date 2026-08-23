@@ -175,21 +175,23 @@ export async function seedDemoData() {
     createdUsers[userData.role] = user;
   }
 
-  // 2. Seed or Sync Products (Clean 6-item menu)
-  await Product.deleteMany({});
-  const products = await Product.insertMany(demoProducts);
+  // 2. Seed Initial Products only if collection is empty
+  const productCount = await Product.countDocuments();
+  let products;
+  if (productCount === 0) {
+    products = await Product.insertMany(demoProducts);
+  } else {
+    products = await Product.find().sort({ createdAt: 1 });
+  }
 
-  // 3. Seed Realistic Multi-State Orders for all test profiles
+  // 3. Seed Realistic Multi-State Orders for all test profiles if empty
   const customer = createdUsers["customer"];
   const restaurant = createdUsers["restaurant"];
   const rider = createdUsers["rider"];
 
   const existingOrders = await Order.countDocuments({ user: customer._id });
 
-  if (existingOrders < 4) {
-    // Remove existing seed orders and recreate realistic lifecycle order set
-    await Order.deleteMany({ user: customer._id });
-
+  if (existingOrders === 0) {
     const now = new Date();
 
     // Order 1: Out for Delivery (Live Active delivery with Assigned Rider & 2-Way Chat)
