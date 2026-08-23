@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Image from "next/image";
+import DishImage, { FALLBACK_CATEGORY_IMAGES, isValidImage } from "@/components/customUi/DishImage";
 import {
   Plus,
   Pencil,
@@ -47,16 +48,6 @@ const emptyProduct = {
   prepTime: "15-20 min",
 };
 
-const FALLBACK_CATEGORY_IMAGES: Record<string, string> = {
-  burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
-  pizza: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
-  pasta: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
-  dessert: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
-  drink: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
-  other: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=450&fit=crop",
-  default: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&h=450&fit=crop",
-};
-
 const PRESET_DISH_PHOTOS = [
   { name: "Flame-Grilled Beef Burger", category: "burger", url: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop" },
   { name: "Crispy Zinger Chicken Burger", category: "burger", url: "https://images.unsplash.com/photo-1525164286253-04e68b9d94c6?w=600&h=450&fit=crop" },
@@ -67,33 +58,6 @@ const PRESET_DISH_PHOTOS = [
   { name: "Hydrabadi Biriyani", category: "other", url: "https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?w=600&h=450&fit=crop" },
   { name: "Chicken Shawarma Wrap", category: "other", url: "https://images.unsplash.com/photo-1529006557810-274b9b2fc783?w=600&h=450&fit=crop" },
 ];
-
-function DishImage({ src, alt, category, name }: { src: string; alt: string; category?: string; name?: string }) {
-  const defaultFallback = FALLBACK_CATEGORY_IMAGES[category || "default"] || FALLBACK_CATEGORY_IMAGES.default;
-  const initialSrc = src && (src.startsWith("http") || src.startsWith("data:image/")) ? src : defaultFallback;
-  const [currentSrc, setCurrentSrc] = useState(initialSrc);
-
-  useEffect(() => {
-    if (src && (src.startsWith("http") || src.startsWith("data:image/"))) {
-      setCurrentSrc(src);
-    } else {
-      setCurrentSrc(defaultFallback);
-    }
-  }, [src, defaultFallback]);
-
-  return (
-    <Image
-      src={currentSrc}
-      alt={alt}
-      fill
-      unoptimized
-      className="object-cover"
-      onError={() => {
-        setCurrentSrc(defaultFallback);
-      }}
-    />
-  );
-}
 
 export default function RestaurantMenuPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -196,6 +160,10 @@ export default function RestaurantMenuPage() {
           body: JSON.stringify({ id: editingId, ...payload }),
         });
         if (res.ok) {
+          const updated = await res.json();
+          setProducts((prev) =>
+            prev.map((p) => (p._id === editingId ? { ...p, ...payload, ...updated } : p))
+          );
           setFeedback("Item updated successfully!");
         }
       } else {
@@ -205,6 +173,8 @@ export default function RestaurantMenuPage() {
           body: JSON.stringify(payload),
         });
         if (res.ok) {
+          const created = await res.json();
+          setProducts((prev) => [{ ...payload, ...created }, ...prev]);
           setFeedback("New item added to menu and saved to database!");
         }
       }

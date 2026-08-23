@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import DishImage from "@/components/customUi/DishImage";
 import { useRouter } from "next/navigation";
 import { Trash2, ShoppingBag, Plus, Minus, ArrowRight, ArrowLeft } from "lucide-react";
 
@@ -123,14 +124,10 @@ export default function CartPage() {
                 className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 flex items-center gap-4 transition-all"
               >
                 <div className="relative w-20 h-20 rounded-xl overflow-hidden bg-gray-100 flex-shrink-0">
-                  <Image
-                    src={
-                      item.image ||
-                      "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=400&fit=crop"
-                    }
+                  <DishImage
+                    src={item.image}
                     alt={item.name}
-                    fill
-                    className="object-cover"
+                    category={item.category}
                   />
                 </div>
 

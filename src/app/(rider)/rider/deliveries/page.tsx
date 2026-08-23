@@ -3,6 +3,7 @@
 import { useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
+import DishImage from "@/components/customUi/DishImage";
 import { Bike, MapPin, Phone, MessageSquare, CheckCircle, Clock, Star, Send, User } from "lucide-react";
 
 interface OrderItem { name: string; quantity: number; image: string; price: number; }
@@ -138,7 +139,7 @@ function RiderDeliveriesContent() {
                 {order.orderItems.map((item, i) => (
                   <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800 rounded-lg p-2 min-w-fit">
                     <div className="relative w-8 h-8 rounded overflow-hidden flex-shrink-0">
-                      <Image src={item.image} alt={item.name} fill className="object-cover" />
+                      <DishImage src={item.image} alt={item.name} />
                     </div>
                     <span className="text-sm">{item.name} x{item.quantity}</span>
                   </div>

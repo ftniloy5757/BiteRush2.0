@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import DishImage from "@/components/customUi/DishImage";
 import {
   Clock,
   CheckCircle,
@@ -710,11 +711,9 @@ export default function OrderDetailsPage({
             {order.orderItems.map((item, index) => (
               <div key={index} className="py-3 flex items-center gap-3">
                 <div className="h-12 w-12 relative rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <Image
+                  <DishImage
                     src={item.image}
                     alt={item.name}
-                    fill
-                    className="object-cover"
                   />
                 </div>
                 <div className="flex-1 min-w-0">

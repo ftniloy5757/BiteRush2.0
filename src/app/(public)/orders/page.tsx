@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import DishImage from "@/components/customUi/DishImage";
 import { ShoppingBag, Clock, ChevronRight, CheckCircle, XCircle, Bike, ChefHat, Package } from "lucide-react";
 
 interface OrderItem {
@@ -215,15 +216,7 @@ export default function OrdersPage() {
                         className="flex items-center gap-2 bg-gray-50 dark:bg-gray-800/60 rounded-xl p-1.5 pr-3 flex-shrink-0"
                       >
                         <div className="relative w-8 h-8 rounded-lg overflow-hidden bg-gray-200 flex-shrink-0">
-                          <Image
-                            src={
-                              item.image ||
-                              "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=500&h=400&fit=crop"
-                            }
-                            alt={item.name}
-                            fill
-                            className="object-cover"
-                          />
+                          <DishImage src={item.image} alt={item.name} />
                         </div>
                         <span className="text-xs font-medium text-gray-700 dark:text-gray-300 max-w-[120px] truncate">
                           {item.quantity}x {item.name}
