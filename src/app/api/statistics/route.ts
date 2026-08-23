@@ -1,34 +1,61 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import connectDB from "@/lib/dbConnect";
 import Product from "@/models/Product";
 import Order from "@/models/Order";
+import { getDynamicProducts } from "@/lib/dynamicProductsStore";
+import { getDynamicOrders } from "@/lib/dynamicOrdersStore";
 
 export async function GET() {
   try {
-    await connectDB();
+    const conn = await connectDB();
+    if (conn && mongoose.connection.readyState === 1) {
+      try {
+        const categories = ["burger", "pizza", "pasta", "dessert", "drink", "other"];
+        const productStats: Record<string, number> = {};
 
-    // Aggregate counts by product category
-    const categories = ["burger", "pizza", "pasta", "dessert", "drink"];
+        for (const cat of categories) {
+          const count = await Product.countDocuments({ category: cat });
+          productStats[cat] = count;
+        }
+
+        const totalProducts = await Product.countDocuments();
+        const totalOrders = await Order.countDocuments();
+
+        if (totalProducts > 0 || totalOrders > 0) {
+          return NextResponse.json({
+            ...productStats,
+            totalProducts,
+            totalOrders,
+          });
+        }
+      } catch (dbErr) {
+        console.warn("DB statistics error, computing from dynamic stores:", dbErr);
+      }
+    }
+
+    // Dynamic stats computation
+    const products = getDynamicProducts();
+    const orders = getDynamicOrders();
+    const categories = ["burger", "pizza", "pasta", "dessert", "drink", "other"];
     const productStats: Record<string, number> = {};
 
     for (const cat of categories) {
-      const count = await Product.countDocuments({ category: cat });
-      productStats[cat] = count;
+      productStats[cat] = products.filter((p) => p.category === cat).length;
     }
-
-    const totalProducts = await Product.countDocuments();
-    const totalOrders = await Order.countDocuments();
 
     return NextResponse.json({
       ...productStats,
-      totalProducts,
-      totalOrders,
+      totalProducts: products.length,
+      totalOrders: orders.length,
     });
   } catch (error: any) {
     console.error("Error fetching statistics:", error);
-    return NextResponse.json(
-      { error: error.message || "Failed to fetch statistics" },
-      { status: 500 }
-    );
+    const products = getDynamicProducts();
+    const orders = getDynamicOrders();
+    return NextResponse.json({
+      totalProducts: products.length,
+      totalOrders: orders.length,
+    });
   }
 }

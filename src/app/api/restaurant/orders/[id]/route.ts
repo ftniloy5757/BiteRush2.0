@@ -3,11 +3,12 @@ import { getServerSession } from "next-auth/next";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
+import { DEMO_IDS } from "@/lib/demoData";
+import { getDynamicOrderById, updateDynamicOrderStatus } from "@/lib/dynamicOrdersStore";
 
 // PUT update order status (accept/decline/prepare/assign rider)
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -17,47 +18,70 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const body = await req.json();
     const { action, riderId, estimatedDeliveryMinutes } = body;
 
-    const order = await Order.findById(id);
-    if (!order) {
-      return NextResponse.json({ message: "Order not found" }, { status: 404 });
-    }
+    let newStatus = "pending";
+    let extraFields: Record<string, any> = {};
 
     switch (action) {
       case "accept":
-        order.status = "accepted";
-        order.acceptedAt = new Date();
+        newStatus = "accepted";
+        extraFields.acceptedAt = new Date().toISOString();
         if (estimatedDeliveryMinutes) {
-          order.estimatedDeliveryMinutes = estimatedDeliveryMinutes;
+          extraFields.estimatedDeliveryMinutes = estimatedDeliveryMinutes;
         }
         break;
       case "decline":
-        order.status = "declined";
+        newStatus = "declined";
         break;
       case "preparing":
-        order.status = "preparing";
+        newStatus = "preparing";
         break;
       case "ready_for_pickup":
-        order.status = "ready_for_pickup";
+        newStatus = "ready_for_pickup";
         break;
       case "assign_rider":
-        if (!riderId) {
-          return NextResponse.json({ message: "Rider ID required" }, { status: 400 });
-        }
-        order.rider = riderId;
-        order.status = "out_for_delivery";
-        order.dispatchedAt = new Date();
+        newStatus = "out_for_delivery";
+        extraFields.dispatchedAt = new Date().toISOString();
+        extraFields.rider = {
+          _id: riderId || DEMO_IDS.RIDER,
+          firstName: "Zayed",
+          lastName: "Masum",
+          contactNumber: "+8801700000003",
+          vehicleType: "Motorcycle",
+        };
         break;
       default:
         return NextResponse.json({ message: "Invalid action" }, { status: 400 });
     }
 
-    await order.save();
+    // Update dynamic store
+    const dynamicUpdated = updateDynamicOrderStatus(id, newStatus, extraFields);
 
-    const updated = await Order.findById(id)
-      .populate("user", "firstName lastName email contactNumber")
-      .populate("rider", "firstName lastName contactNumber vehicleType");
+    const conn = await connectDB();
+    if (conn) {
+      try {
+        const order = await Order.findById(id);
+        if (order) {
+          order.status = newStatus;
+          if (extraFields.acceptedAt) order.acceptedAt = new Date(extraFields.acceptedAt);
+          if (extraFields.estimatedDeliveryMinutes)
+            order.estimatedDeliveryMinutes = extraFields.estimatedDeliveryMinutes;
+          if (extraFields.dispatchedAt) order.dispatchedAt = new Date(extraFields.dispatchedAt);
+          if (action === "assign_rider") order.rider = riderId || DEMO_IDS.RIDER;
 
-    return NextResponse.json(updated, { status: 200 });
+          await order.save();
+
+          const updated = await Order.findById(id)
+            .populate("user", "firstName lastName email contactNumber")
+            .populate("rider", "firstName lastName contactNumber vehicleType");
+
+          return NextResponse.json(updated, { status: 200 });
+        }
+      } catch (dbErr) {
+        console.warn("DB update order error, using dynamic store:", dbErr);
+      }
+    }
+
+    return NextResponse.json(dynamicUpdated || { _id: id, status: newStatus }, { status: 200 });
   } catch (error: any) {
     console.error("Error updating order:", error);
     return NextResponse.json({ message: error.message || "Error updating order" }, { status: 500 });

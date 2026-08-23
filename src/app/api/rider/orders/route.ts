@@ -4,7 +4,8 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
-import { DEMO_ORDERS, DEMO_IDS } from "@/lib/demoData";
+import { DEMO_IDS } from "@/lib/demoData";
+import { getDynamicOrders } from "@/lib/dynamicOrdersStore";
 
 // GET assigned deliveries for rider
 export async function GET() {
@@ -25,19 +26,25 @@ export async function GET() {
           return NextResponse.json(orders, { status: 200 });
         }
       } catch (err) {
-        console.warn("DB rider orders lookup error, serving fallback:", err);
+        console.warn("DB rider orders lookup error, serving dynamic store:", err);
       }
     }
 
-    // Fallback demo orders for rider
-    const riderFallbackOrders = DEMO_ORDERS.filter(
-      (o: any) => o.rider?._id === session.user.id || o.rider?._id === DEMO_IDS.RIDER
+    // Dynamic store filter for rider
+    const allOrders = getDynamicOrders();
+    const riderFallbackOrders = allOrders.filter(
+      (o: any) =>
+        o.rider?._id === session.user.id ||
+        o.rider?._id === DEMO_IDS.RIDER ||
+        o.status === "out_for_delivery" ||
+        (o.status === "delivered" && o.rider)
     );
 
     return NextResponse.json(riderFallbackOrders, { status: 200 });
   } catch (error) {
     console.error("Error fetching rider orders:", error);
-    const riderFallbackOrders = DEMO_ORDERS.filter((o: any) => o.rider?._id === DEMO_IDS.RIDER);
+    const allOrders = getDynamicOrders();
+    const riderFallbackOrders = allOrders.filter((o: any) => o.rider?._id === DEMO_IDS.RIDER);
     return NextResponse.json(riderFallbackOrders, { status: 200 });
   }
 }

@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
-import { DEMO_ORDERS } from "@/lib/demoData";
+import { getDynamicOrders } from "@/lib/dynamicOrdersStore";
 
 // GET all orders for restaurant
 export async function GET() {
@@ -26,13 +26,13 @@ export async function GET() {
           return NextResponse.json(orders, { status: 200 });
         }
       } catch (dbErr) {
-        console.warn("DB query error in restaurant orders, serving fallback:", dbErr);
+        console.warn("DB query error in restaurant orders, serving dynamic store:", dbErr);
       }
     }
 
-    return NextResponse.json(DEMO_ORDERS, { status: 200 });
+    return NextResponse.json(getDynamicOrders(), { status: 200 });
   } catch (error) {
     console.error("Error fetching restaurant orders, serving fallback:", error);
-    return NextResponse.json(DEMO_ORDERS, { status: 200 });
+    return NextResponse.json(getDynamicOrders(), { status: 200 });
   }
 }

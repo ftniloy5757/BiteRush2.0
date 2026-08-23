@@ -5,7 +5,8 @@ import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
 import Product from "@/models/Product";
-import { INITIAL_PRODUCTS } from "@/lib/initialProducts";
+import { getDynamicProducts } from "@/lib/dynamicProductsStore";
+import { FALLBACK_CATEGORY_IMAGES, isValidImage } from "@/components/customUi/DishImage";
 
 export async function GET() {
   try {
@@ -22,7 +23,8 @@ export async function GET() {
             for (const item of order.orderItems) {
               const product = await Product.findById(item.product);
               if (product) {
-                categoryCount[product.category] = (categoryCount[product.category] || 0) + item.quantity;
+                categoryCount[product.category] =
+                  (categoryCount[product.category] || 0) + item.quantity;
               }
             }
           }
@@ -36,47 +38,93 @@ export async function GET() {
               category: { $in: sortedCategories.slice(0, 3) },
               isAvailable: true,
               inStock: true,
-            }).sort({ rating: -1 }).limit(6);
+            })
+              .sort({ rating: -1 })
+              .limit(6);
 
             const featuredProducts = await Product.find({
               isAvailable: true,
               inStock: true,
               _id: { $nin: preferredProducts.map((p) => p._id) },
-            }).sort({ rating: -1, numReviews: -1 }).limit(6);
+            })
+              .sort({ rating: -1, numReviews: -1 })
+              .limit(6);
 
-            return NextResponse.json({
-              personalized: preferredProducts,
-              trending: featuredProducts,
-              topCategories: sortedCategories.slice(0, 3),
-            }, { status: 200 });
+            const sanitizeList = (list: any[]) =>
+              list.map((p) => {
+                const obj = p.toObject ? p.toObject() : p;
+                if (!isValidImage(obj.image)) {
+                  obj.image =
+                    FALLBACK_CATEGORY_IMAGES[obj.category] || FALLBACK_CATEGORY_IMAGES.default;
+                }
+                return obj;
+              });
+
+            return NextResponse.json(
+              {
+                personalized: sanitizeList(preferredProducts),
+                trending: sanitizeList(featuredProducts),
+                topCategories: sortedCategories.slice(0, 3),
+              },
+              { status: 200 }
+            );
           }
         }
 
         const featured = await Product.find({ featured: true, isAvailable: true, inStock: true }).limit(6);
-        const popular = await Product.find({ isAvailable: true, inStock: true }).sort({ rating: -1, numReviews: -1 }).limit(6);
+        const popular = await Product.find({ isAvailable: true, inStock: true })
+          .sort({ rating: -1, numReviews: -1 })
+          .limit(6);
 
-        return NextResponse.json({
-          personalized: featured.slice(0, 3),
-          trending: popular,
-          topCategories: ["burger", "pizza", "pasta"],
-        }, { status: 200 });
+        const sanitizeList = (list: any[]) =>
+          list.map((p) => {
+            const obj = p.toObject ? p.toObject() : p;
+            if (!isValidImage(obj.image)) {
+              obj.image =
+                FALLBACK_CATEGORY_IMAGES[obj.category] || FALLBACK_CATEGORY_IMAGES.default;
+            }
+            return obj;
+          });
+
+        if (featured.length > 0 || popular.length > 0) {
+          return NextResponse.json(
+            {
+              personalized: sanitizeList(featured.slice(0, 3)),
+              trending: sanitizeList(popular),
+              topCategories: ["burger", "pizza", "pasta"],
+            },
+            { status: 200 }
+          );
+        }
       } catch (dbErr) {
-        console.warn("DB query error in recommendations, serving fallback:", dbErr);
+        console.warn("DB query error in recommendations, serving dynamic fallback:", dbErr);
       }
     }
 
-    // Fallback recommendations using initial products
-    return NextResponse.json({
-      personalized: INITIAL_PRODUCTS.slice(0, 3),
-      trending: INITIAL_PRODUCTS.slice(3),
-      topCategories: ["burger", "pizza", "pasta"],
-    }, { status: 200 });
+    // Dynamic recommendations from dynamic products
+    const dynamicList = getDynamicProducts();
+    const featured = dynamicList.filter((p) => p.featured);
+    const personalized = (featured.length > 0 ? featured : dynamicList).slice(0, 3);
+    const trending = dynamicList.slice(2, 6);
+
+    return NextResponse.json(
+      {
+        personalized,
+        trending: trending.length > 0 ? trending : dynamicList,
+        topCategories: ["burger", "pizza", "pasta"],
+      },
+      { status: 200 }
+    );
   } catch (error: any) {
     console.error("Error fetching recommendations, serving fallback:", error);
-    return NextResponse.json({
-      personalized: INITIAL_PRODUCTS.slice(0, 3),
-      trending: INITIAL_PRODUCTS.slice(3),
-      topCategories: ["burger", "pizza"],
-    }, { status: 200 });
+    const dynamicList = getDynamicProducts();
+    return NextResponse.json(
+      {
+        personalized: dynamicList.slice(0, 3),
+        trending: dynamicList.slice(3),
+        topCategories: ["burger", "pizza"],
+      },
+      { status: 200 }
+    );
   }
 }

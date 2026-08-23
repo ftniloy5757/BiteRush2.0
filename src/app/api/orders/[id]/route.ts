@@ -4,7 +4,7 @@ import mongoose from "mongoose";
 import Order from "@/models/Order";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../../auth/[...nextauth]/option";
-import { DEMO_ORDERS } from "@/lib/demoData";
+import { getDynamicOrderById, updateDynamicOrderStatus } from "@/lib/dynamicOrdersStore";
 
 export async function GET(
   req: NextRequest,
@@ -14,10 +14,7 @@ export async function GET(
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
-        { message: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
     }
 
     const conn = await connectDB();
@@ -32,16 +29,21 @@ export async function GET(
           return NextResponse.json({ order }, { status: 200 });
         }
       } catch (dbErr) {
-        console.warn("DB lookup error for order [id], searching fallback:", dbErr);
+        console.warn("DB lookup error for order [id], searching dynamic store:", dbErr);
       }
     }
 
-    // Fallback demo order lookup
-    const fallbackOrder = DEMO_ORDERS.find((o) => o._id === id) || DEMO_ORDERS[0];
-    return NextResponse.json({ order: fallbackOrder }, { status: 200 });
+    // Dynamic order lookup
+    const fallbackOrder = getDynamicOrderById(id);
+    if (fallbackOrder) {
+      return NextResponse.json({ order: fallbackOrder }, { status: 200 });
+    }
+
+    return NextResponse.json({ message: "Order not found" }, { status: 404 });
   } catch (error: any) {
     console.error("Error fetching order, serving fallback:", error);
-    return NextResponse.json({ order: DEMO_ORDERS[0] }, { status: 200 });
+    const fallbackOrder = getDynamicOrderById((await params).id);
+    return NextResponse.json({ order: fallbackOrder }, { status: 200 });
   }
 }
 
@@ -54,11 +56,10 @@ export async function PATCH(
     const { id } = await params;
     const session = await getServerSession(authOptions);
     if (!session || !session.user) {
-      return NextResponse.json(
-        { message: "Not authenticated" },
-        { status: 401 }
-      );
+      return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
     }
+
+    updateDynamicOrderStatus(id, "cancelled");
 
     const conn = await connectDB();
     if (conn && mongoose.connection.readyState === 1) {
@@ -79,7 +80,7 @@ export async function PATCH(
           );
         }
       } catch (dbErr) {
-        console.warn("DB cancel order error, returning success:", dbErr);
+        console.warn("DB cancel order error, returning dynamic cancel:", dbErr);
       }
     }
 
