@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../auth/[...nextauth]/option";
 import Product from "@/models/Product";
-import { INITIAL_PRODUCTS } from "@/lib/initialProducts";
+import { getDynamicProducts, addDynamicProduct } from "@/lib/dynamicProductsStore";
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
@@ -51,9 +51,7 @@ export async function GET(req: NextRequest) {
           const { seedDemoData } = await import("@/lib/seedDemoUsers");
           await seedDemoData();
           products = await Product.find(filter).sort({ createdAt: -1 });
-        } catch {
-          // Continue if seeding encounters an issue
-        }
+        } catch {}
       }
 
       if (products.length > 0) {
@@ -71,8 +69,8 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Resilient Fallback in case DB is unconfigured or initializing
-    let fallback = [...INITIAL_PRODUCTS];
+    // Dynamic Store Fallback
+    let fallback = getDynamicProducts();
     if (category && category !== "all") {
       fallback = fallback.filter((p) => p.category === category);
     }
@@ -92,14 +90,13 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(fallback, { status: 200 });
   } catch (error) {
     console.error("Products API error, serving fallback:", error);
-    return NextResponse.json(INITIAL_PRODUCTS, { status: 200 });
+    return NextResponse.json(getDynamicProducts(), { status: 200 });
   }
 }
 
 // POST create new product (restaurant or admin)
 export async function POST(req: NextRequest) {
   try {
-    const conn = await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -113,19 +110,19 @@ export async function POST(req: NextRequest) {
         CATEGORY_DEFAULT_IMAGES[productData.category] || CATEGORY_DEFAULT_IMAGES.default;
     }
 
+    const dynamicCreated = addDynamicProduct(productData);
+
+    const conn = await connectDB();
     if (conn) {
-      const newProduct = await Product.create(productData);
-      return NextResponse.json(newProduct, { status: 201 });
+      try {
+        const newProduct = await Product.create(productData);
+        return NextResponse.json(newProduct, { status: 201 });
+      } catch (dbErr) {
+        console.warn("DB save failed, using dynamic created:", dbErr);
+      }
     }
 
-    // Fallback if DB offline
-    const mockProduct = {
-      _id: "prod_" + Date.now(),
-      ...productData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return NextResponse.json(mockProduct, { status: 201 });
+    return NextResponse.json(dynamicCreated, { status: 201 });
   } catch (error: any) {
     console.error("Error creating product:", error);
     return NextResponse.json(

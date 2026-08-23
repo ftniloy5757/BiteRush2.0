@@ -63,7 +63,7 @@ function MenuList() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const categories = ["all", "burger", "pizza", "pasta", "dessert", "drink"];
+  const categories = ["all", "burger", "pizza", "pasta", "dessert", "drink", "other"];
 
   // Fetch products from API in background, fallback to INITIAL_PRODUCTS
   useEffect(() => {

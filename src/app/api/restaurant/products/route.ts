@@ -3,6 +3,12 @@ import { getServerSession } from "next-auth/next";
 import connectDB from "@/lib/dbConnect";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Product from "@/models/Product";
+import {
+  getDynamicProducts,
+  addDynamicProduct,
+  updateDynamicProduct,
+  deleteDynamicProduct,
+} from "@/lib/dynamicProductsStore";
 
 const CATEGORY_DEFAULT_IMAGES: Record<string, string> = {
   burger: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
@@ -22,12 +28,12 @@ const isValidImage = (img?: string) => {
 // GET all products for restaurant management
 export async function GET() {
   try {
-    const conn = await connectDB();
     const session = await getServerSession(authOptions);
     if (!session || session.user.role !== "restaurant") {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const conn = await connectDB();
     if (conn) {
       let products = await Product.find().sort({ createdAt: -1 });
       if (products.length === 0) {
@@ -38,24 +44,24 @@ export async function GET() {
         } catch {}
       }
 
-      const sanitizedProducts = products.map((p) => {
-        const prodObj = p.toObject ? p.toObject() : p;
-        if (!isValidImage(prodObj.image)) {
-          prodObj.image =
-            CATEGORY_DEFAULT_IMAGES[prodObj.category] || CATEGORY_DEFAULT_IMAGES.default;
-        }
-        return prodObj;
-      });
+      if (products.length > 0) {
+        const sanitizedProducts = products.map((p) => {
+          const prodObj = p.toObject ? p.toObject() : p;
+          if (!isValidImage(prodObj.image)) {
+            prodObj.image =
+              CATEGORY_DEFAULT_IMAGES[prodObj.category] || CATEGORY_DEFAULT_IMAGES.default;
+          }
+          return prodObj;
+        });
 
-      return NextResponse.json(sanitizedProducts, { status: 200 });
+        return NextResponse.json(sanitizedProducts, { status: 200 });
+      }
     }
 
-    const { INITIAL_PRODUCTS } = await import("@/lib/initialProducts");
-    return NextResponse.json(INITIAL_PRODUCTS, { status: 200 });
+    return NextResponse.json(getDynamicProducts(), { status: 200 });
   } catch (error) {
     console.error("Error fetching products:", error);
-    const { INITIAL_PRODUCTS } = await import("@/lib/initialProducts");
-    return NextResponse.json(INITIAL_PRODUCTS, { status: 200 });
+    return NextResponse.json(getDynamicProducts(), { status: 200 });
   }
 }
 
@@ -75,19 +81,20 @@ export async function POST(req: NextRequest) {
         CATEGORY_DEFAULT_IMAGES[productData.category] || CATEGORY_DEFAULT_IMAGES.default;
     }
 
+    // Always update the dynamic in-memory store so UI updates immediately
+    const dynamicCreated = addDynamicProduct(productData);
+
     const conn = await connectDB();
     if (conn) {
-      const newProduct = await Product.create(productData);
-      return NextResponse.json(newProduct, { status: 201 });
+      try {
+        const newProduct = await Product.create(productData);
+        return NextResponse.json(newProduct, { status: 201 });
+      } catch (dbErr) {
+        console.warn("DB save failed, returned dynamic created:", dbErr);
+      }
     }
 
-    const mockProduct = {
-      _id: "prod_" + Date.now(),
-      ...productData,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-    return NextResponse.json(mockProduct, { status: 201 });
+    return NextResponse.json(dynamicCreated, { status: 201 });
   } catch (error: any) {
     console.error("Error creating product:", error);
     return NextResponse.json({ message: error.message || "Error creating product" }, { status: 500 });
@@ -109,13 +116,18 @@ export async function PUT(req: NextRequest) {
         CATEGORY_DEFAULT_IMAGES[updateData.category] || CATEGORY_DEFAULT_IMAGES.default;
     }
 
+    updateDynamicProduct(id, updateData);
+
     const conn = await connectDB();
     if (conn) {
-      const product = await Product.findByIdAndUpdate(id, updateData, { new: true });
-      if (!product) {
-        return NextResponse.json({ message: "Product not found" }, { status: 404 });
+      try {
+        const product = await Product.findByIdAndUpdate(id, updateData, { new: true });
+        if (product) {
+          return NextResponse.json(product, { status: 200 });
+        }
+      } catch (dbErr) {
+        console.warn("DB update failed, using dynamic:", dbErr);
       }
-      return NextResponse.json(product, { status: 200 });
     }
 
     return NextResponse.json({ _id: id, ...updateData }, { status: 200 });
@@ -139,10 +151,17 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ message: "Product ID required" }, { status: 400 });
     }
 
+    deleteDynamicProduct(id);
+
     const conn = await connectDB();
     if (conn) {
-      await Product.findByIdAndDelete(id);
+      try {
+        await Product.findByIdAndDelete(id);
+      } catch (dbErr) {
+        console.warn("DB delete failed, removed from dynamic:", dbErr);
+      }
     }
+
     return NextResponse.json({ message: "Product deleted", success: true }, { status: 200 });
   } catch (error: any) {
     console.error("Error deleting product:", error);
