@@ -50,3 +50,9 @@ yarn-error.log*
 .npm-global
 .npmrc
 
+# Academic & compliance reports
+BiteRush_Cryptography_Implementation_Pipeline*.pdf
+447_check.md
+Project Requirements Compliance Report*.pdf
+*.pdf
+
