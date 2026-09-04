@@ -10,12 +10,23 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    // Find user by email
-    const user = await User.findOne({ email });
+    const normEmail = email.toLowerCase().trim();
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+
+    // Find user by blind lookup HMAC or email
+    const user = await User.findOne({
+      $or: [{ emailLookupHmac }, { email: normEmail }],
+    });
 
     if (!user) {
       return NextResponse.json({ message: "User not found" }, { status: 404 });
     }
+
+    // Decrypt real email if encrypted
+    const recipientEmail = user.emailEncrypted
+      ? CryptoService.decryptProfile(user.emailEncrypted)
+      : user.email;
 
     // Generate reset token and set expiry
     const resetToken = crypto.randomBytes(20).toString("hex");
@@ -27,7 +38,7 @@ export async function POST(request: NextRequest) {
     await user.save();
 
     // Send reset email if credentials configured, otherwise log in dev mode
-    if (process.env.EMAIL_NAME && process.env.EMAIL_PASS) {
+    if (process.env.EMAIL_NAME && process.env.EMAIL_PASS && recipientEmail && recipientEmail !== "[ENCRYPTED]") {
       const transporter = nodemailer.createTransport({
         service: "gmail",
         auth: {
@@ -38,7 +49,7 @@ export async function POST(request: NextRequest) {
 
       await transporter.sendMail({
         from: process.env.EMAIL_NAME,
-        to: user.email,
+        to: recipientEmail,
         subject: "Password Reset",
         html: `
           <p>You requested a password reset. Click the link below to reset your password:</p>

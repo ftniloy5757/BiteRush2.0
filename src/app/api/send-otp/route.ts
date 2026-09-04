@@ -10,23 +10,34 @@ export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    if (type === "email") {
-      const emailOtp = Math.floor(1000 + Math.random() * 9000).toString();
-      const emailOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
 
-      // Update the user with the new OTP
-      await User.findOneAndUpdate(
-        { email },
-        {
-          emailOtp,
-          emailOtpExpiresAt,
-        }
-      );
+    if (type === "email") {
+      const { otp: emailOtp, expiresAt: emailOtpExpiresAt } = CryptoService.generateOTP();
+      const normEmail = (email || "").toLowerCase().trim();
+      const emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+
+      // Find user by lookup HMAC or email
+      const user = await User.findOne({
+        $or: [{ emailLookupHmac }, { email: normEmail }],
+      });
+
+      if (!user) {
+        return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+      }
+
+      user.emailOtp = emailOtp;
+      user.emailOtpExpiresAt = emailOtpExpiresAt;
+      await user.save();
+
+      const recipientEmail = user.emailEncrypted
+        ? CryptoService.decryptProfile(user.emailEncrypted)
+        : user.email;
 
       const emailUser = process.env.EMAIL_NAME || process.env.GMAIL_USER;
       const emailPass = process.env.EMAIL_PASS || process.env.GMAIL_PASSWORD;
 
-      if (emailUser && emailPass) {
+      if (emailUser && emailPass && recipientEmail && recipientEmail !== "[ENCRYPTED]") {
         const transporter = nodemailer.createTransport({
           service: "gmail",
           auth: {
@@ -37,19 +48,21 @@ export async function POST(request: NextRequest) {
 
         await transporter.sendMail({
           from: emailUser,
-          to: email,
-          subject: "Your OTP Code",
-          text: `Your OTP for email verification is ${emailOtp}`,
+          to: recipientEmail,
+          subject: "Your BiteRush Verification Code",
+          text: `Your OTP for email verification is ${emailOtp}. This code expires in 10 minutes.`,
         });
       } else {
-        console.log(`[Dev Mode] OTP for ${email}: ${emailOtp}`);
+        console.log(`[Dev Mode] OTP for ${recipientEmail}: ${emailOtp}`);
       }
     } else if (type === "phone") {
-      const phoneOtp = Math.floor(1000 + Math.random() * 9000).toString();
-      const phoneOtpExpiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+      const { otp: phoneOtp, expiresAt: phoneOtpExpiresAt } = CryptoService.generateOTP();
+      const contactNumberLookupHmac = CryptoService.createPhoneLookupHmac(phone);
 
-      // Find user by contact number
-      const user = await User.findOne({ contactNumber: phone });
+      // Find user by contact number lookup HMAC or plaintext
+      const user = await User.findOne({
+        $or: [{ contactNumberLookupHmac }, { contactNumber: phone }],
+      });
 
       if (!user) {
         return NextResponse.json(
