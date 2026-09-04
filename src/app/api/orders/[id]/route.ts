@@ -65,6 +65,23 @@ export async function GET(
             return NextResponse.json({ message: "Forbidden: Not authorized to view this order" }, { status: 403 });
           }
 
+          // HMAC Data Integrity Verification — detect unauthorized modifications
+          if (order.integrityMac) {
+            const integrityPayload = {
+              userId: order.user?._id?.toString() || order.user?.toString(),
+              totalPrice: order.totalPrice,
+              itemsPrice: order.itemsPrice,
+              paymentMethod: order.paymentMethod,
+            };
+            const isIntegrityValid = CryptoService.verifyIntegrityMac(integrityPayload, order.integrityMac);
+            if (!isIntegrityValid) {
+              return NextResponse.json(
+                { error: "CRITICAL_TAMPER_ALERT: Order data integrity verification failed! HMAC-SHA256 mismatch detected." },
+                { status: 403 }
+              );
+            }
+          }
+
           const decryptedOrder = decryptOrderPayload(order);
           return NextResponse.json({ order: decryptedOrder }, { status: 200 });
         }

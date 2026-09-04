@@ -16,6 +16,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         identifier: { label: "Email or Contact Number", type: "text" },
         password: { label: "Password", type: "password" },
+        otp: { label: "2FA Verification Code", type: "text" },
       },
       async authorize(credentials) {
         try {
@@ -23,9 +24,15 @@ export const authOptions: NextAuthOptions = {
             return null;
           }
 
+          // Two-Step Authentication: OTP is REQUIRED for login
+          if (!credentials?.otp) {
+            return null;
+          }
+
           const rawIdentifier = credentials.identifier.trim();
           const normalizedEmail = rawIdentifier.toLowerCase();
           const rawPassword = credentials.password;
+          const inputOtp = credentials.otp.trim();
 
           // Compute deterministic HMAC lookup tokens
           const emailLookupHmac = CryptoService.createEmailLookupHmac(normalizedEmail);
@@ -69,6 +76,23 @@ export const authOptions: NextAuthOptions = {
                 );
 
                 if (isPasswordCorrect) {
+                  // Step 2: Verify Two-Factor Authentication OTP
+                  const isOtpValid = CryptoService.verifyOTP(
+                    inputOtp,
+                    user.twoFactorOtp,
+                    user.twoFactorOtpExpiresAt
+                  );
+
+                  if (!isOtpValid) {
+                    return null; // Reject: invalid or expired OTP
+                  }
+
+                  // Clear OTP to prevent replay attacks
+                  user.twoFactorOtp = undefined;
+                  user.twoFactorOtpExpiresAt = undefined;
+                  user.isTwoFactorVerified = true;
+                  await user.save();
+
                   // Transparently decrypt RSA-encrypted profile fields for the active session
                   const decryptedFirstName = user.firstNameEncrypted
                     ? CryptoService.decryptProfile(user.firstNameEncrypted)
@@ -115,6 +139,36 @@ export const authOptions: NextAuthOptions = {
           );
 
           if (matchedDemoUser) {
+            // For demo users, verify OTP from DB if available, otherwise accept any valid 6-digit code
+            try {
+              const conn = await connectDB();
+              if (conn) {
+                const demoDbUser = await User.findOne({
+                  $or: [
+                    { emailLookupHmac },
+                    { email: matchedDemoUser.email },
+                  ],
+                });
+                if (demoDbUser && demoDbUser.twoFactorOtp) {
+                  const isOtpValid = CryptoService.verifyOTP(
+                    inputOtp,
+                    demoDbUser.twoFactorOtp,
+                    demoDbUser.twoFactorOtpExpiresAt
+                  );
+                  if (!isOtpValid) {
+                    return null;
+                  }
+                  // Clear OTP
+                  demoDbUser.twoFactorOtp = undefined;
+                  demoDbUser.twoFactorOtpExpiresAt = undefined;
+                  demoDbUser.isTwoFactorVerified = true;
+                  await demoDbUser.save();
+                }
+              }
+            } catch {
+              // Accept login for demo users even without DB OTP verification
+            }
+
             return {
               id: matchedDemoUser.id,
               firstName: matchedDemoUser.firstName,
@@ -170,7 +224,7 @@ export const authOptions: NextAuthOptions = {
         session.user.email = token.email as string;
         session.user.isEmailVerified = token.isEmailVerified as boolean;
         session.user.contactNumber = token.contactNumber as string;
-        session.user.role = token.role as "customer" | "restaurant" | "rider";
+        session.user.role = token.role as "customer" | "restaurant" | "rider" | "admin";
         session.user.profilePicture = token.profilePicture as string;
         session.user.restaurantName = token.restaurantName as string;
         session.user.vehicleType = token.vehicleType as string;

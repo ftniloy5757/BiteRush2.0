@@ -17,9 +17,9 @@ export async function GET(
     const session = await getServerSession(authOptions);
 
     // Check if user is authenticated and has admin role
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json(
-        { error: "Unauthorized: Restaurant access required" },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
@@ -29,7 +29,7 @@ export async function GET(
     await connectDB();
     
     const order = await Order.findById(id)
-      .populate("user", "firstName lastName email");
+      .populate("user", "firstName lastName email firstNameEncrypted lastNameEncrypted emailEncrypted");
     
     if (!order) {
       return NextResponse.json(
@@ -37,8 +37,37 @@ export async function GET(
         { status: 404 }
       );
     }
+
+    const orderObj = order.toObject();
+
+    // Decrypt shipping address for admin if encrypted
+    if (order.shippingAddressEncrypted) {
+      try {
+        const { CryptoService } = await import("@/lib/crypto/cryptoService");
+        const decryptedJson = CryptoService.decryptOrderField(order.shippingAddressEncrypted);
+        orderObj.shippingAddress = JSON.parse(decryptedJson);
+      } catch {
+        // Fallback
+      }
+    }
+
+    // Decrypt user fields for admin
+    if (orderObj.user) {
+      try {
+        const { CryptoService } = await import("@/lib/crypto/cryptoService");
+        if (orderObj.user.firstNameEncrypted) {
+          orderObj.user.firstName = CryptoService.decryptProfile(orderObj.user.firstNameEncrypted);
+        }
+        if (orderObj.user.lastNameEncrypted) {
+          orderObj.user.lastName = CryptoService.decryptProfile(orderObj.user.lastNameEncrypted);
+        }
+        if (orderObj.user.emailEncrypted) {
+          orderObj.user.email = CryptoService.decryptProfile(orderObj.user.emailEncrypted);
+        }
+      } catch {}
+    }
     
-    return NextResponse.json(order);
+    return NextResponse.json(orderObj);
   } catch (error) {
     console.error("Error fetching order:", error);
     return NextResponse.json(
@@ -58,9 +87,9 @@ export async function PATCH(
     const session = await getServerSession(authOptions);
 
     // Check if user is authenticated and has admin role
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json(
-        { error: "Unauthorized: Restaurant access required" },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }

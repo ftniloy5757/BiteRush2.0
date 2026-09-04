@@ -2,6 +2,7 @@ export const DEMO_IDS = {
   CUSTOMER: "65f000000000000000000001",
   RESTAURANT: "65f000000000000000000002",
   RIDER: "65f000000000000000000003",
+  ADMIN: "65f000000000000000000004",
   PROD_BURGER_1: "65f100000000000000000001",
   PROD_BURGER_2: "65f100000000000000000002",
   PROD_PIZZA: "65f100000000000000000003",
@@ -49,6 +50,19 @@ export const DEMO_USERS = [
     role: "rider" as const,
     restaurantName: "",
     vehicleType: "Motorcycle",
+  },
+  {
+    id: DEMO_IDS.ADMIN,
+    _id: DEMO_IDS.ADMIN,
+    firstName: "BiteRush",
+    lastName: "Admin",
+    contactNumber: "+8801700000004",
+    email: "admin@biterush.com",
+    password: "Password123!",
+    isEmailVerified: true,
+    role: "admin" as const,
+    restaurantName: "",
+    vehicleType: "",
   },
 ];
 

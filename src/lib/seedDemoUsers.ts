@@ -52,6 +52,19 @@ const demoUsers = [
     status: "Online" as const,
     themePreference: "light" as const,
   },
+  {
+    _id: DEMO_IDS.ADMIN,
+    firstName: "BiteRush",
+    lastName: "Admin",
+    email: "admin@biterush.com",
+    contactNumber: "+8801700000004",
+    role: "admin" as const,
+    bio: "BiteRush system administrator.",
+    isEmailVerified: true,
+    isPhoneVerified: true,
+    status: "Online" as const,
+    themePreference: "light" as const,
+  },
 ];
 
 // Exactly 6 ready-made testing menu items covering all key categories
@@ -181,20 +194,30 @@ export async function seedDemoData() {
     if (!user) {
       user = await User.create({
         ...userData,
+        // Mask plaintext PII for compromise resistance
+        firstName: "[ENCRYPTED]",
+        lastName: "[ENCRYPTED]",
+        email: "[ENCRYPTED]",
+        contactNumber: "[ENCRYPTED]",
+        restaurantName: userData.restaurantName ? "[ENCRYPTED]" : undefined,
+        restaurantAddress: userData.restaurantAddress ? "[ENCRYPTED]" : undefined,
+        vehicleType: userData.vehicleType ? "[ENCRYPTED]" : undefined,
         ...cryptoFields,
         passwordHash,
       });
     } else {
-      user.firstName = userData.firstName;
-      user.lastName = userData.lastName;
+      user.firstName = "[ENCRYPTED]";
+      user.lastName = "[ENCRYPTED]";
+      user.email = "[ENCRYPTED]";
+      user.contactNumber = "[ENCRYPTED]";
       user.role = userData.role;
       user.passwordHash = passwordHash;
       user.isEmailVerified = true;
       user.isPhoneVerified = true;
       Object.assign(user, cryptoFields);
-      if (userData.restaurantName) user.restaurantName = userData.restaurantName;
-      if (userData.restaurantAddress) user.restaurantAddress = userData.restaurantAddress;
-      if (userData.vehicleType) user.vehicleType = userData.vehicleType;
+      if (userData.restaurantName) user.restaurantName = "[ENCRYPTED]";
+      if (userData.restaurantAddress) user.restaurantAddress = "[ENCRYPTED]";
+      if (userData.vehicleType) user.vehicleType = "[ENCRYPTED]";
       if (userData.activeStatus !== undefined) user.activeStatus = userData.activeStatus;
       await user.save();
     }

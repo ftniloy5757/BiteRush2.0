@@ -13,9 +13,9 @@ export async function POST(req: NextRequest) {
     const session = await getServerSession(authOptions);
 
     // Check if user is authenticated and has admin role
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json(
-        { error: "Unauthorized: Restaurant access required" },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
@@ -35,8 +35,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Compute blind lookup HMACs
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const { KeyManager } = await import("@/lib/crypto/keyManager");
+    const normEmail = email.toLowerCase().trim();
+    const emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+    const contactNumberLookupHmac = contactNumber
+      ? CryptoService.createPhoneLookupHmac(contactNumber)
+      : undefined;
+
     // Check if email already exists
-    const existingUserEmail = await User.findOne({ email });
+    const existingUserEmail = await User.findOne({
+      $or: [{ emailLookupHmac }, { email: normEmail }],
+    });
     if (existingUserEmail) {
       return NextResponse.json(
         { error: "Email already in use" },
@@ -46,7 +57,12 @@ export async function POST(req: NextRequest) {
 
     // Check if contact number already exists (if provided)
     if (contactNumber) {
-      const existingUserPhone = await User.findOne({ contactNumber });
+      const existingUserPhone = await User.findOne({
+        $or: [
+          ...(contactNumberLookupHmac ? [{ contactNumberLookupHmac }] : []),
+          { contactNumber },
+        ],
+      });
       if (existingUserPhone) {
         return NextResponse.json(
           { error: "Contact number already in use" },
@@ -59,34 +75,57 @@ export async function POST(req: NextRequest) {
     const salt = await bcrypt.genSalt(10);
     const passwordHash = await bcrypt.hash(password, salt);
 
+    // Encrypt sensitive PII using RSA
+    const firstNameEncrypted = CryptoService.encryptProfile(firstName);
+    const lastNameEncrypted = CryptoService.encryptProfile(lastName);
+    const emailEncrypted = CryptoService.encryptProfile(normEmail);
+    const contactNumberEncrypted = contactNumber
+      ? CryptoService.encryptProfile(contactNumber)
+      : undefined;
+
+    // Generate integrity MAC
+    const integrityMac = CryptoService.generateIntegrityMac({
+      emailLookupHmac,
+      contactNumberLookupHmac,
+      role: "admin",
+    });
+
     // Create new admin user with verified status
     const newAdmin = new User({
-      firstName,
-      lastName,
-      email,
+      firstName: "[ENCRYPTED]",
+      lastName: "[ENCRYPTED]",
+      email: "[ENCRYPTED]",
+      contactNumber: "[ENCRYPTED]",
+      firstNameEncrypted,
+      lastNameEncrypted,
+      emailEncrypted,
+      contactNumberEncrypted,
+      emailLookupHmac,
+      contactNumberLookupHmac,
+      integrityMac,
+      cryptoVersion: KeyManager.getActiveVersion(),
       passwordHash,
-      role: "restaurant", // Set role to restaurant
-      contactNumber,
+      role: "admin",
       bio,
-      isEmailVerified: true, // Auto-verify email
-      isPhoneVerified: contactNumber ? true : false, // Auto-verify phone if provided
+      isEmailVerified: true,
+      isPhoneVerified: contactNumber ? true : false,
     });
 
     // Save the new admin user
     await newAdmin.save();
 
-    // Return success response (omitting sensitive fields)
+    // Return success response with decrypted fields for display
     return NextResponse.json(
       {
         success: true,
         message: "Admin user created successfully",
         user: {
           id: newAdmin._id,
-          firstName: newAdmin.firstName,
-          lastName: newAdmin.lastName,
-          email: newAdmin.email,
+          firstName,
+          lastName,
+          email: normEmail,
           role: newAdmin.role,
-          contactNumber: newAdmin.contactNumber,
+          contactNumber,
         },
       },
       { status: 201 }

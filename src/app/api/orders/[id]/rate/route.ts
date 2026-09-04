@@ -34,11 +34,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const order = await Order.findById(id);
         if (order) {
           order.rating = rating;
-          order.review = review || "";
+          order.review = "[ENCRYPTED]";
           order.reviewEncrypted = reviewEncrypted;
           order.ratedAt = new Date();
           await order.save();
-          return NextResponse.json({ success: true, order }, { status: 200 });
+          return NextResponse.json({ success: true, order: { ...order.toObject(), review } }, { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB save rating error, using dynamic store:", dbErr);

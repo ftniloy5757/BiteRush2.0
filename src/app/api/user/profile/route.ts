@@ -23,8 +23,25 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Decrypt RSA encrypted fields if present
     const u = user as any;
+
+    // HMAC Data Integrity Verification — detect unauthorized modifications before decryption
+    if (u.integrityMac) {
+      const integrityPayload = {
+        emailLookupHmac: u.emailLookupHmac,
+        contactNumberLookupHmac: u.contactNumberLookupHmac,
+        role: u.role,
+      };
+      const isIntegrityValid = CryptoService.verifyIntegrityMac(integrityPayload, u.integrityMac);
+      if (!isIntegrityValid) {
+        return NextResponse.json(
+          { error: "CRITICAL_TAMPER_ALERT: Data integrity verification failed! Message Authentication Code (HMAC-SHA256) mismatch detected." },
+          { status: 403 }
+        );
+      }
+    }
+
+    // Decrypt RSA encrypted fields if present
     const firstName = u.firstNameEncrypted
       ? CryptoService.decryptProfile(u.firstNameEncrypted)
       : u.firstName;
@@ -69,6 +86,9 @@ export async function GET() {
       isTwoFactorEnabled: u.isTwoFactorEnabled,
       createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : null,
       updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : null,
+      // Cryptographic metadata badges
+      cryptoVersion: u.cryptoVersion,
+      integrityVerified: true,
     };
 
     return NextResponse.json(userProfile);

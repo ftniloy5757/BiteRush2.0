@@ -10,7 +10,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 // Helper function to check if user is admin
 async function isAdmin() {
   const session = await getServerSession(authOptions);
-  return session?.user?.role === "restaurant";
+  return session?.user?.role === "admin";
 }
 
 // GET - Fetch a specific user
@@ -37,7 +37,33 @@ export async function GET(req: NextRequest, context: any) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(user);
+    const userObj = user.toObject();
+    try {
+      const { CryptoService } = await import("@/lib/crypto/cryptoService");
+      if (user.firstNameEncrypted) {
+        userObj.firstName = CryptoService.decryptProfile(user.firstNameEncrypted);
+      }
+      if (user.lastNameEncrypted) {
+        userObj.lastName = CryptoService.decryptProfile(user.lastNameEncrypted);
+      }
+      if (user.emailEncrypted) {
+        userObj.email = CryptoService.decryptProfile(user.emailEncrypted);
+      }
+      if (user.contactNumberEncrypted) {
+        userObj.contactNumber = CryptoService.decryptProfile(user.contactNumberEncrypted);
+      }
+      if (user.restaurantNameEncrypted) {
+        userObj.restaurantName = CryptoService.decryptProfile(user.restaurantNameEncrypted);
+      }
+      if (user.restaurantAddressEncrypted) {
+        userObj.restaurantAddress = CryptoService.decryptProfile(user.restaurantAddressEncrypted);
+      }
+      if (user.vehicleTypeEncrypted) {
+        userObj.vehicleType = CryptoService.decryptProfile(user.vehicleTypeEncrypted);
+      }
+    } catch {}
+
+    return NextResponse.json(userObj);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
@@ -61,6 +87,11 @@ export async function PATCH(req: NextRequest, context: any) {
       return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
     }
 
+    const user = await User.findById(userId);
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
     // Remove sensitive fields from update
     const {
       passwordHash,
@@ -76,15 +107,52 @@ export async function PATCH(req: NextRequest, context: any) {
       updateData.passwordHash = await bcrypt.hash(body.password, 10);
     }
 
+    // Encrypt sensitive PII with RSA and mask plaintext
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    if (updateData.firstName) {
+      updateData.firstNameEncrypted = CryptoService.encryptProfile(updateData.firstName);
+      updateData.firstName = "[ENCRYPTED]";
+    }
+    if (updateData.lastName) {
+      updateData.lastNameEncrypted = CryptoService.encryptProfile(updateData.lastName);
+      updateData.lastName = "[ENCRYPTED]";
+    }
+    if (updateData.email) {
+      const normEmail = updateData.email.toLowerCase().trim();
+      updateData.emailEncrypted = CryptoService.encryptProfile(normEmail);
+      updateData.emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+      updateData.email = "[ENCRYPTED]";
+    }
+    if (updateData.contactNumber) {
+      updateData.contactNumberEncrypted = CryptoService.encryptProfile(updateData.contactNumber);
+      updateData.contactNumberLookupHmac = CryptoService.createPhoneLookupHmac(updateData.contactNumber);
+      updateData.contactNumber = "[ENCRYPTED]";
+    }
+    if (updateData.restaurantName) {
+      updateData.restaurantNameEncrypted = CryptoService.encryptProfile(updateData.restaurantName);
+      updateData.restaurantName = "[ENCRYPTED]";
+    }
+    if (updateData.restaurantAddress) {
+      updateData.restaurantAddressEncrypted = CryptoService.encryptProfile(updateData.restaurantAddress);
+      updateData.restaurantAddress = "[ENCRYPTED]";
+    }
+    if (updateData.vehicleType) {
+      updateData.vehicleTypeEncrypted = CryptoService.encryptProfile(updateData.vehicleType);
+      updateData.vehicleType = "[ENCRYPTED]";
+    }
+
+    // Update integrity MAC
+    updateData.integrityMac = CryptoService.generateIntegrityMac({
+      emailLookupHmac: updateData.emailLookupHmac || user.emailLookupHmac,
+      contactNumberLookupHmac: updateData.contactNumberLookupHmac || user.contactNumberLookupHmac,
+      role: updateData.role || user.role,
+    });
+
     const updatedUser = await User.findByIdAndUpdate(
       userId,
       { $set: updateData },
       { new: true, runValidators: true }
     ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
-
-    if (!updatedUser) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
 
     return NextResponse.json(updatedUser);
   } catch (error: any) {

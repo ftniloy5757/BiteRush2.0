@@ -99,10 +99,10 @@ const orderSchema = new Schema<IOrder>(
       },
     ],
     shippingAddress: {
-      address: { type: String, required: true },
-      city: { type: String, required: true },
-      postalCode: { type: String, required: true },
-      area: { type: String, required: true },
+      address: { type: String, default: "[ENCRYPTED]" },
+      city: { type: String, default: "[ENCRYPTED]" },
+      postalCode: { type: String, default: "[ENCRYPTED]" },
+      area: { type: String, default: "[ENCRYPTED]" },
       details: { type: String },
     },
     shippingAddressEncrypted: String,
@@ -171,7 +171,7 @@ const orderSchema = new Schema<IOrder>(
     },
     // Rating & review
     rating: { type: Number, min: 1, max: 5 },
-    review: { type: String },
+    review: { type: String, default: "[ENCRYPTED]" },
     reviewEncrypted: String,
     ratedAt: { type: Date },
     // Timing
@@ -183,7 +183,7 @@ const orderSchema = new Schema<IOrder>(
       {
         senderRole: { type: String, enum: ["customer", "rider", "restaurant"], required: true },
         senderName: { type: String, required: true },
-        text: { type: String, required: true },
+        text: { type: String, default: "[ENCRYPTED]" },
         textEncrypted: String,
         createdAt: { type: Date, default: Date.now },
       },

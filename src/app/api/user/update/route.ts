@@ -88,37 +88,49 @@ export async function PUT(request: Request) {
       }
     }
 
-    // Prepare update with RSA-encrypted PII and operational fields
+    // Prepare update with RSA-encrypted PII and masked plaintext
     const updateData: Record<string, any> = {
-      firstName,
-      lastName,
+      firstName: "[ENCRYPTED]",
+      lastName: "[ENCRYPTED]",
       firstNameEncrypted: CryptoService.encryptProfile(firstName),
       lastNameEncrypted: CryptoService.encryptProfile(lastName),
     };
 
     if (bio !== undefined) {
-      updateData.bio = bio;
+      updateData.bio = "[ENCRYPTED]";
       updateData.bioEncrypted = CryptoService.encryptProfile(bio);
     }
     if (contactNumber !== undefined) {
-      updateData.contactNumber = contactNumber;
+      updateData.contactNumber = "[ENCRYPTED]";
       updateData.contactNumberEncrypted = CryptoService.encryptProfile(contactNumber);
       updateData.contactNumberLookupHmac = contactNumberLookupHmac;
     }
     if (restaurantName !== undefined) {
-      updateData.restaurantName = restaurantName;
+      updateData.restaurantName = "[ENCRYPTED]";
       updateData.restaurantNameEncrypted = CryptoService.encryptProfile(restaurantName);
     }
     if (restaurantAddress !== undefined) {
-      updateData.restaurantAddress = restaurantAddress;
+      updateData.restaurantAddress = "[ENCRYPTED]";
       updateData.restaurantAddressEncrypted = CryptoService.encryptProfile(restaurantAddress);
     }
     if (vehicleType !== undefined) {
-      updateData.vehicleType = vehicleType;
+      updateData.vehicleType = "[ENCRYPTED]";
       updateData.vehicleTypeEncrypted = CryptoService.encryptProfile(vehicleType);
     }
     if (themePreference) updateData.themePreference = themePreference;
     if (status) updateData.status = status;
+
+    // Recalculate HMAC data integrity MAC
+    const user = await User.findById(userId);
+    if (user) {
+      const emailLookupHmac = user.emailLookupHmac || CryptoService.createEmailLookupHmac(session.user.email || "");
+      const updatedContactHmac = contactNumberLookupHmac || user.contactNumberLookupHmac || "";
+      updateData.integrityMac = CryptoService.generateIntegrityMac({
+        emailLookupHmac,
+        contactNumberLookupHmac: updatedContactHmac,
+        role: user.role,
+      });
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,

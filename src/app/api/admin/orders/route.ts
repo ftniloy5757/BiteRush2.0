@@ -13,9 +13,9 @@ export async function GET(request: Request) {
     const session = await getServerSession(authOptions);
 
     // Check if user is authenticated and has admin role
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || session.user.role !== "admin") {
       return NextResponse.json(
-        { error: "Unauthorized: Restaurant access required" },
+        { error: "Unauthorized: Admin access required" },
         { status: 403 }
       );
     }
@@ -23,9 +23,26 @@ export async function GET(request: Request) {
     await connectDB();
     
     // Get all orders with basic user info
-    const orders = await Order.find({})
-      .populate("user", "firstName lastName email")
+    const rawOrders = await Order.find({})
+      .populate("user", "firstName lastName email firstNameEncrypted lastNameEncrypted emailEncrypted")
       .sort({ createdAt: -1 });
+
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const orders = rawOrders.map((o) => {
+      const obj = o.toObject();
+      if (obj.user) {
+        if (obj.user.firstNameEncrypted) {
+          obj.user.firstName = CryptoService.decryptProfile(obj.user.firstNameEncrypted);
+        }
+        if (obj.user.lastNameEncrypted) {
+          obj.user.lastName = CryptoService.decryptProfile(obj.user.lastNameEncrypted);
+        }
+        if (obj.user.emailEncrypted) {
+          obj.user.email = CryptoService.decryptProfile(obj.user.emailEncrypted);
+        }
+      }
+      return obj;
+    });
     
     return NextResponse.json(orders);
   } catch (error) {

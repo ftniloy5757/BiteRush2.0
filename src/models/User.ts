@@ -57,9 +57,9 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
   {
-    firstName: { type: String, required: true },
-    lastName: { type: String, required: true },
-    email: { type: String, required: true },
+    firstName: { type: String, default: "[ENCRYPTED]" },
+    lastName: { type: String, default: "[ENCRYPTED]" },
+    email: { type: String, default: "[ENCRYPTED]" },
     role: {
       type: String,
       enum: ["customer", "restaurant", "rider", "admin"],
@@ -68,7 +68,7 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     bio: String,
     profilePicture: String,
-    contactNumber: { type: String, sparse: true },
+    contactNumber: { type: String, default: "[ENCRYPTED]", sparse: true },
     themePreference: {
       type: String,
       enum: ["light", "dark"],

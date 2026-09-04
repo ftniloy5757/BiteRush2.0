@@ -75,16 +75,17 @@ export const POST = async (request: Request) => {
     });
 
     // 6. Create new user with encrypted PII and blind lookup indexes
+    // Plaintext fields store masked placeholders to prevent PII compromise
     const newUser = new User({
-      firstName, // for display compatibility
-      lastName,
-      email: normalizedEmail,
-      contactNumber,
+      firstName: "[ENCRYPTED]",
+      lastName: "[ENCRYPTED]",
+      email: "[ENCRYPTED]",
+      contactNumber: "[ENCRYPTED]",
       role: role || "customer",
       passwordHash,
-      restaurantName,
-      restaurantAddress,
-      vehicleType,
+      restaurantName: restaurantName ? "[ENCRYPTED]" : undefined,
+      restaurantAddress: restaurantAddress ? "[ENCRYPTED]" : undefined,
+      vehicleType: vehicleType ? "[ENCRYPTED]" : undefined,
 
       // RSA Encrypted fields
       firstNameEncrypted,

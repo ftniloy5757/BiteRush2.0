@@ -163,11 +163,17 @@ export async function POST(req: NextRequest) {
         const order = new Order({
           user: session.user.id,
           orderItems,
-          shippingAddress, // kept for structured reference
+          // Masked plaintext — actual data lives in shippingAddressEncrypted (ECC)
+          shippingAddress: {
+            address: "[ENCRYPTED]",
+            city: "[ENCRYPTED]",
+            postalCode: "[ENCRYPTED]",
+            area: "[ENCRYPTED]",
+          },
           shippingAddressEncrypted,
           paymentMethod,
           deliveryMethod,
-          deliveryInstructions,
+          deliveryInstructions: deliveryInstructions ? "[ENCRYPTED]" : undefined,
           deliveryInstructionsEncrypted,
           itemsPrice,
           shippingPrice,

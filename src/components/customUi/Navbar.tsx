@@ -24,6 +24,7 @@ import {
   Headphones,
   ShoppingBag,
   ShoppingBag as CartIcon,
+  MessageSquare,
 } from "lucide-react";
 import { ModeToggle } from "./theme-toggle";
 
@@ -46,6 +47,8 @@ export default function Navbar() {
 
   const getRoleBadge = () => {
     switch (userRole) {
+      case "admin":
+        return <span className="bg-red-100 dark:bg-red-950 text-red-700 dark:text-red-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Admin</span>;
       case "restaurant":
         return <span className="bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase">Restaurant</span>;
       case "rider":
@@ -62,7 +65,9 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <Link
             href={
-              userRole === "restaurant"
+              userRole === "admin"
+                ? "/admin"
+                : userRole === "restaurant"
                 ? "/restaurant"
                 : userRole === "rider"
                 ? "/rider"
@@ -116,6 +121,13 @@ export default function Navbar() {
                 className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors"
               >
                 Feed
+              </Link>
+              <Link
+                href="/community"
+                className="text-gray-600 hover:text-orange-600 dark:text-gray-300 dark:hover:text-orange-400 transition-colors flex items-center gap-1"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Community
               </Link>
               <Link
                 href="/orders"
@@ -179,6 +191,40 @@ export default function Navbar() {
               </Link>
             </>
           )}
+
+          {/* Admin links */}
+          {userRole === "admin" && (
+            <>
+              <Link
+                href="/admin"
+                className="text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
+              >
+                <LayoutDashboard className="h-4 w-4" />
+                Dashboard
+              </Link>
+              <Link
+                href="/admin/orders"
+                className="text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
+              >
+                <ClipboardList className="h-4 w-4" />
+                Orders
+              </Link>
+              <Link
+                href="/admin/users"
+                className="text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
+              >
+                <User className="h-4 w-4" />
+                Users
+              </Link>
+              <Link
+                href="/community"
+                className="text-gray-600 hover:text-red-600 dark:text-gray-300 dark:hover:text-red-400 transition-colors flex items-center gap-1.5"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Community
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Right-side Profile / Auth */}
@@ -230,6 +276,12 @@ export default function Navbar() {
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
+                      <Link href="/community" className="flex items-center text-xs py-2">
+                        <MessageSquare className="mr-2 h-4 w-4 text-orange-500" />
+                        <span>Community</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
                       <Link href="/orders" className="flex items-center text-xs py-2">
                         <ClipboardList className="mr-2 h-4 w-4 text-orange-500" />
                         <span>My Orders</span>
@@ -273,6 +325,35 @@ export default function Navbar() {
                       <Link href="/rider/deliveries" className="flex items-center text-xs py-2">
                         <ClipboardList className="mr-2 h-4 w-4 text-violet-500" />
                         <span>Active Deliveries</span>
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
+
+                {userRole === "admin" && (
+                  <>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin" className="flex items-center text-xs py-2">
+                        <LayoutDashboard className="mr-2 h-4 w-4 text-red-500" />
+                        <span>Admin Dashboard</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/orders" className="flex items-center text-xs py-2">
+                        <ClipboardList className="mr-2 h-4 w-4 text-red-500" />
+                        <span>Manage Orders</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin/users" className="flex items-center text-xs py-2">
+                        <User className="mr-2 h-4 w-4 text-red-500" />
+                        <span>Manage Users</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link href="/community" className="flex items-center text-xs py-2">
+                        <MessageSquare className="mr-2 h-4 w-4 text-red-500" />
+                        <span>Community Feed</span>
                       </Link>
                     </DropdownMenuItem>
                   </>

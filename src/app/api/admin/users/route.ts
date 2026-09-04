@@ -10,7 +10,7 @@ import bcrypt from "bcryptjs";
 // Helper function to check if user is admin
 async function isAdmin() {
   const session = await getServerSession(authOptions);
-  return session?.user?.role === "restaurant";
+  return session?.user?.role === "admin";
 }
 
 // GET - Fetch all users
@@ -52,11 +52,30 @@ export async function GET(req: NextRequest) {
     const skip = (page - 1) * limit;
 
     // Execute query
-    const users = await User.find(query)
+    const rawUsers = await User.find(query)
       .select("-passwordHash -phoneOtp -emailOtp -resetToken")
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
+
+    // Decrypt RSA fields for admin
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const users = rawUsers.map((u) => {
+      const obj = u.toObject();
+      if (obj.firstNameEncrypted) {
+        obj.firstName = CryptoService.decryptProfile(obj.firstNameEncrypted);
+      }
+      if (obj.lastNameEncrypted) {
+        obj.lastName = CryptoService.decryptProfile(obj.lastNameEncrypted);
+      }
+      if (obj.emailEncrypted) {
+        obj.email = CryptoService.decryptProfile(obj.emailEncrypted);
+      }
+      if (obj.contactNumberEncrypted) {
+        obj.contactNumber = CryptoService.decryptProfile(obj.contactNumberEncrypted);
+      }
+      return obj;
+    });
 
     // Get total count for pagination
     const total = await User.countDocuments(query);
@@ -89,7 +108,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
 
     // Validate required fields
-    const { firstName, lastName, email, role, password } = body;
+    const { firstName, lastName, email, role, password, contactNumber } = body;
     if (!firstName || !lastName || !email || !role || !password) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -97,8 +116,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const normEmail = email.toLowerCase().trim();
+    const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const { KeyManager } = await import("@/lib/crypto/keyManager");
+    const emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+    const contactNumberLookupHmac = contactNumber
+      ? CryptoService.createPhoneLookupHmac(contactNumber)
+      : undefined;
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({
+      $or: [
+        { emailLookupHmac },
+        { email: normEmail },
+        ...(contactNumberLookupHmac ? [{ contactNumberLookupHmac }] : []),
+      ],
+    });
     if (existingUser) {
       return NextResponse.json(
         { error: "User with this email already exists" },
@@ -107,24 +140,54 @@ export async function POST(req: NextRequest) {
     }
 
     // Hash password
-
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create new user
+    // Encrypt sensitive PII using RSA
+    const firstNameEncrypted = CryptoService.encryptProfile(firstName);
+    const lastNameEncrypted = CryptoService.encryptProfile(lastName);
+    const emailEncrypted = CryptoService.encryptProfile(normEmail);
+    const contactNumberEncrypted = contactNumber
+      ? CryptoService.encryptProfile(contactNumber)
+      : undefined;
+
+    // Generate integrity MAC
+    const integrityMac = CryptoService.generateIntegrityMac({
+      emailLookupHmac,
+      contactNumberLookupHmac,
+      role: role || "customer",
+    });
+
+    // Create new user with encrypted fields and masked plaintext
     const newUser = new User({
       ...body,
+      firstName: "[ENCRYPTED]",
+      lastName: "[ENCRYPTED]",
+      email: "[ENCRYPTED]",
+      contactNumber: contactNumber ? "[ENCRYPTED]" : undefined,
+      firstNameEncrypted,
+      lastNameEncrypted,
+      emailEncrypted,
+      contactNumberEncrypted,
+      emailLookupHmac,
+      contactNumberLookupHmac,
+      integrityMac,
+      cryptoVersion: KeyManager.getActiveVersion(),
       passwordHash,
       isEmailVerified: true, // Admin-created accounts are pre-verified
     });
 
     await newUser.save();
 
-    // Return user data without sensitive information
+    // Return user data with decrypted fields for display
     const userData = newUser.toObject();
     delete userData.passwordHash;
     delete userData.phoneOtp;
     delete userData.emailOtp;
     delete userData.resetToken;
+    userData.firstName = firstName;
+    userData.lastName = lastName;
+    userData.email = normEmail;
+    userData.contactNumber = contactNumber;
 
     return NextResponse.json(userData, { status: 201 });
   } catch (error: any) {
