@@ -62,8 +62,34 @@ export async function GET() {
       console.warn("DB error in profile route, will use session fallback:", dbErr);
     }
 
-    // If not found in DB, check DEMO_USERS or construct from session
+    // If not found in DB, check dynamic users store, DEMO_USERS, or construct from session
     if (!u) {
+      const { findDynamicUserById, findDynamicUserByEmail } = await import("@/lib/dynamicUsersStore");
+      const dyn = findDynamicUserById(userId) || (sessionEmail ? findDynamicUserByEmail(sessionEmail) : null);
+      if (dyn) {
+        return NextResponse.json({
+          id: dyn._id,
+          firstName: dyn.firstName || session.user.firstName || "Customer",
+          lastName: dyn.lastName || session.user.lastName || "",
+          email: dyn.email || session.user.email || "",
+          contactNumber: dyn.contactNumber || session.user.contactNumber || "+8801740734780",
+          bio: "Food enthusiast & loyal BiteRush customer.",
+          restaurantName: dyn.restaurantName || null,
+          restaurantAddress: dyn.restaurantAddress || null,
+          vehicleType: dyn.vehicleType || null,
+          role: dyn.role || session.user.role || "customer",
+          profilePicture: null,
+          themePreference: "light",
+          status: "Online",
+          isPhoneVerified: true,
+          isEmailVerified: dyn.isEmailVerified !== false,
+          isTwoFactorEnabled: dyn.isTwoFactorEnabled !== false,
+          savedAddresses: dyn.savedAddresses && dyn.savedAddresses.length > 0 ? dyn.savedAddresses : DEFAULT_ADDRESSES,
+          createdAt: dyn.createdAt || new Date().toISOString(),
+          updatedAt: dyn.updatedAt || new Date().toISOString(),
+        });
+      }
+
       const matchedDemo = DEMO_USERS.find(
         (du) => du.id === userId || (sessionEmail && du.email.toLowerCase() === sessionEmail)
       );

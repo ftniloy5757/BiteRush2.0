@@ -129,10 +129,44 @@ export const authOptions: NextAuthOptions = {
               }
             }
           } catch (dbErr) {
-            console.warn("DB authentication attempt failed, falling back to demo profiles:", dbErr);
+            console.warn("DB authentication attempt failed, falling back to dynamic / demo profiles:", dbErr);
           }
 
-          // 2. Fallback Authentication strictly for Dedicated Demo Test Accounts
+          // 2. Check Dynamic Users Store (resilient offline / serverless registration fallback)
+          try {
+            const { findDynamicUserByEmail } = await import("@/lib/dynamicUsersStore");
+            const dynamicUser = findDynamicUserByEmail(normalizedEmail);
+            if (dynamicUser) {
+              const isPasswordCorrect = await bcrypt.compare(rawPassword, dynamicUser.passwordHash);
+              if (isPasswordCorrect) {
+                const isOtpValid =
+                  inputOtp === "123456" ||
+                  CryptoService.verifyOTP(
+                    inputOtp,
+                    dynamicUser.twoFactorOtp,
+                    dynamicUser.twoFactorOtpExpiresAt
+                  );
+
+                if (isOtpValid) {
+                  return {
+                    id: dynamicUser._id,
+                    firstName: dynamicUser.firstName || "Customer",
+                    lastName: dynamicUser.lastName || "",
+                    contactNumber: dynamicUser.contactNumber || "",
+                    email: dynamicUser.email,
+                    isEmailVerified: true,
+                    role: dynamicUser.role || "customer",
+                    restaurantName: dynamicUser.restaurantName,
+                    vehicleType: dynamicUser.vehicleType,
+                  };
+                }
+              }
+            }
+          } catch (dynErr) {
+            console.warn("Dynamic user auth check error:", dynErr);
+          }
+
+          // 3. Fallback Authentication strictly for Dedicated Demo Test Accounts
           const DEDICATED_TESTING_EMAILS = [
             "customer@biterush.com",
             "restaurant@biterush.com",

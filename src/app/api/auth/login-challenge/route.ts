@@ -136,7 +136,47 @@ export async function POST(req: NextRequest) {
       console.warn("DB authentication challenge failed:", dbErr);
     }
 
-    // 2. Fallback: Check dedicated demo users only (strictly the 4 testing emails)
+    // 2. Check Dynamic Users Store (resilient offline / serverless registration fallback)
+    const { findDynamicUserByEmail, updateDynamicUser } = await import("@/lib/dynamicUsersStore");
+    const dynamicUser = findDynamicUserByEmail(normalizedEmail);
+    if (dynamicUser) {
+      const isPasswordCorrect = await bcrypt.compare(password, dynamicUser.passwordHash);
+      if (isPasswordCorrect) {
+        const { otp, expiresAt } = CryptoService.generateOTP();
+        updateDynamicUser(dynamicUser._id, {
+          twoFactorOtp: otp,
+          twoFactorOtpExpiresAt: expiresAt,
+        });
+
+        const [local, domain] = normalizedEmail.split("@");
+        const maskedEmail = `${local.slice(0, 2)}***@${domain}`;
+
+        try {
+          if (process.env.EMAIL_NAME && process.env.EMAIL_PASS) {
+            await transporter.sendMail({
+              from: process.env.EMAIL_NAME,
+              to: normalizedEmail,
+              subject: "BiteRush Login Verification Code (2FA)",
+              text: `Your BiteRush two-factor authentication code is: ${otp}\n\nThis code is valid for 10 minutes. Do not share this code with anyone.`,
+            });
+          } else {
+            console.log(`[Email Notice] 2FA OTP for ${normalizedEmail}: ${otp}`);
+          }
+        } catch (emailErr) {
+          console.warn("Failed to send 2FA email:", emailErr);
+        }
+
+        return NextResponse.json({
+          success: true,
+          requires2FA: true,
+          userId: dynamicUser._id,
+          maskedEmail,
+          message: "Credentials verified. A 6-digit verification code has been sent to your email.",
+        });
+      }
+    }
+
+    // 3. Fallback: Check dedicated demo users only (strictly the 4 testing emails)
     const DEDICATED_TESTING_EMAILS = [
       "customer@biterush.com",
       "restaurant@biterush.com",
