@@ -39,8 +39,25 @@ export const connectDB = async () => {
         serverSelectionTimeoutMS: 8000,
         connectTimeoutMS: 8000,
       })
-      .then((mongooseInstance) => {
+      .then(async (mongooseInstance) => {
         cached.conn = mongooseInstance;
+        // Clean up legacy unique indexes on users collection that clash with [ENCRYPTED] placeholders
+        try {
+          const col = mongooseInstance.connection.db?.collection("users");
+          if (col) {
+            const indexes = await col.indexes();
+            for (const idx of indexes) {
+              if (
+                (idx.name === "contactNumber_1" && idx.unique) ||
+                (idx.name === "email_1" && idx.unique)
+              ) {
+                await col.dropIndex(idx.name).catch(() => {});
+              }
+            }
+          }
+        } catch {
+          // Ignore index cleanup errors
+        }
         return mongooseInstance;
       })
       .catch((err) => {

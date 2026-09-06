@@ -144,36 +144,56 @@ export async function PATCH(req: NextRequest, context: any) {
 
     // Encrypt sensitive PII with RSA and mask plaintext
     const { CryptoService } = await import("@/lib/crypto/cryptoService");
-    if (updateData.firstName) {
+    if (updateData.firstName && updateData.firstName !== "[ENCRYPTED]") {
       updateData.firstNameEncrypted = CryptoService.encryptProfile(updateData.firstName);
       updateData.firstName = "[ENCRYPTED]";
+    } else if (updateData.firstName === "[ENCRYPTED]") {
+      delete updateData.firstName;
     }
-    if (updateData.lastName) {
+
+    if (updateData.lastName && updateData.lastName !== "[ENCRYPTED]") {
       updateData.lastNameEncrypted = CryptoService.encryptProfile(updateData.lastName);
       updateData.lastName = "[ENCRYPTED]";
+    } else if (updateData.lastName === "[ENCRYPTED]") {
+      delete updateData.lastName;
     }
-    if (updateData.email) {
+
+    if (updateData.email && updateData.email !== "[ENCRYPTED]") {
       const normEmail = updateData.email.toLowerCase().trim();
       updateData.emailEncrypted = CryptoService.encryptProfile(normEmail);
       updateData.emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
       updateData.email = "[ENCRYPTED]";
+    } else if (updateData.email === "[ENCRYPTED]") {
+      delete updateData.email;
     }
-    if (updateData.contactNumber) {
+
+    if (updateData.contactNumber && updateData.contactNumber !== "[ENCRYPTED]") {
       updateData.contactNumberEncrypted = CryptoService.encryptProfile(updateData.contactNumber);
       updateData.contactNumberLookupHmac = CryptoService.createPhoneLookupHmac(updateData.contactNumber);
       updateData.contactNumber = "[ENCRYPTED]";
+    } else if (updateData.contactNumber === "[ENCRYPTED]") {
+      delete updateData.contactNumber;
     }
-    if (updateData.restaurantName) {
+
+    if (updateData.restaurantName && updateData.restaurantName !== "[ENCRYPTED]") {
       updateData.restaurantNameEncrypted = CryptoService.encryptProfile(updateData.restaurantName);
       updateData.restaurantName = "[ENCRYPTED]";
+    } else if (updateData.restaurantName === "[ENCRYPTED]") {
+      delete updateData.restaurantName;
     }
-    if (updateData.restaurantAddress) {
+
+    if (updateData.restaurantAddress && updateData.restaurantAddress !== "[ENCRYPTED]") {
       updateData.restaurantAddressEncrypted = CryptoService.encryptProfile(updateData.restaurantAddress);
       updateData.restaurantAddress = "[ENCRYPTED]";
+    } else if (updateData.restaurantAddress === "[ENCRYPTED]") {
+      delete updateData.restaurantAddress;
     }
-    if (updateData.vehicleType) {
+
+    if (updateData.vehicleType && updateData.vehicleType !== "[ENCRYPTED]") {
       updateData.vehicleTypeEncrypted = CryptoService.encryptProfile(updateData.vehicleType);
       updateData.vehicleType = "[ENCRYPTED]";
+    } else if (updateData.vehicleType === "[ENCRYPTED]") {
+      delete updateData.vehicleType;
     }
 
     // Update integrity MAC
@@ -183,11 +203,38 @@ export async function PATCH(req: NextRequest, context: any) {
       role: updateData.role || user.role,
     });
 
-    const updatedUser = await User.findByIdAndUpdate(
-      userId,
-      { $set: updateData },
-      { new: true, runValidators: true }
-    ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
+    let updatedUser: any = null;
+    try {
+      updatedUser = await User.findByIdAndUpdate(
+        userId,
+        { $set: updateData },
+        { new: true, runValidators: true }
+      ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
+    } catch (err: any) {
+      if (err.code === 11000 || err.message?.includes("E11000")) {
+        try {
+          const col = mongoose.connection.db?.collection("users");
+          if (col) {
+            if (err.message?.includes("contactNumber_1")) {
+              await col.dropIndex("contactNumber_1").catch(() => {});
+            }
+            if (err.message?.includes("email_1")) {
+              await col.dropIndex("email_1").catch(() => {});
+            }
+          }
+          updatedUser = await User.findByIdAndUpdate(
+            userId,
+            { $set: updateData },
+            { new: true, runValidators: false }
+          ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
+        } catch (retryErr) {
+          console.warn("Retry after 11000 failed:", retryErr);
+          throw err;
+        }
+      } else {
+        throw err;
+      }
+    }
 
     if (!updatedUser) {
       // Check dynamic store fallback

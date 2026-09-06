@@ -79,7 +79,7 @@ const userSchema = new Schema<IUser>(
     passwordHash: { type: String, required: true },
     bio: String,
     profilePicture: String,
-    contactNumber: { type: String, default: "[ENCRYPTED]", sparse: true },
+    contactNumber: { type: String, default: "[ENCRYPTED]" },
     themePreference: {
       type: String,
       enum: ["light", "dark"],
