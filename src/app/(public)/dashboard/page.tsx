@@ -207,12 +207,12 @@ export default function DashboardGreeting() {
           </div>
 
           <div className="lg:col-span-5 hidden sm:block">
-            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/40 group hover:scale-[1.02] transition-transform bg-orange-950/20">
+            <div className="relative aspect-[1672/941] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/40 group hover:scale-[1.02] transition-transform bg-black/40">
               <Image
                 src="/BiteRush2_Cover.png"
                 alt="BiteRush Official Cover"
                 fill
-                className="object-cover"
+                className="object-contain"
                 priority
               />
             </div>

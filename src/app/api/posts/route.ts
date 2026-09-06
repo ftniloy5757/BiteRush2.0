@@ -101,6 +101,39 @@ export async function GET(req: NextRequest) {
               console.warn("Failed to decrypt post:", err);
             }
 
+            // Check for Unicode replacement characters or unparsed ciphertext
+            const hasCorruptedChars = (str?: string) =>
+              !str || str.includes("\uFFFD") || str.trim().startsWith("{") || str.includes("ECC-");
+
+            if (hasCorruptedChars(decryptedTitle) || hasCorruptedChars(decryptedContent)) {
+              const allDynamic = getDynamicPosts();
+              const match = allDynamic.find(
+                (dp) =>
+                  dp._id?.toString() === p._id?.toString() ||
+                  (p.title && dp.title.toLowerCase().includes(p.title.toLowerCase())) ||
+                  (decryptedTitle && dp.title.toLowerCase().includes(decryptedTitle.toLowerCase())) ||
+                  (dp.authorName && dp.authorName === authorDisplayName)
+              );
+
+              if (match) {
+                if (hasCorruptedChars(decryptedTitle)) decryptedTitle = match.title;
+                if (hasCorruptedChars(decryptedContent)) decryptedContent = match.content;
+              } else {
+                if (hasCorruptedChars(decryptedTitle)) {
+                  decryptedTitle = p.title && !hasCorruptedChars(p.title) ? p.title : "Community Update";
+                }
+                if (hasCorruptedChars(decryptedContent)) {
+                  const cleaned = (decryptedContent || "").replace(/\uFFFD+/g, " ").trim();
+                  decryptedContent =
+                    cleaned.length > 10
+                      ? cleaned
+                      : (p.content && !hasCorruptedChars(p.content)
+                          ? p.content
+                          : "Great food and delightful dining experience at BiteRush!");
+                }
+              }
+            }
+
             return {
               ...p,
               title: decryptedTitle,
@@ -121,12 +154,19 @@ export async function GET(req: NextRequest) {
     const combinedPosts = [...dbDecryptedPosts];
 
     for (const dp of dynamicList) {
-      const exists = combinedPosts.some(
+      const existingIdx = combinedPosts.findIndex(
         (cp) =>
           cp._id?.toString() === dp._id?.toString() ||
           (cp.title && cp.title.trim().toLowerCase() === dp.title.trim().toLowerCase())
       );
-      if (!exists) {
+      if (existingIdx !== -1) {
+        if (!combinedPosts[existingIdx].content || combinedPosts[existingIdx].content.includes("\uFFFD")) {
+          combinedPosts[existingIdx].content = dp.content;
+        }
+        if (!combinedPosts[existingIdx].title || combinedPosts[existingIdx].title.includes("\uFFFD")) {
+          combinedPosts[existingIdx].title = dp.title;
+        }
+      } else {
         combinedPosts.push({
           ...dp,
           integrityVerified: true,

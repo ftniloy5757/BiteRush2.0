@@ -195,7 +195,7 @@ export function eccEncrypt(
 
   // Maximum bytes per chunk: 28 bytes ensures m * 100 < 2^256
   const chunkSize = 24;
-  const encryptedPairs: { c1: string; c2: string }[] = [];
+  const encryptedPairs: { c1: string; c2: string; l?: number }[] = [];
 
   for (let i = 0; i < dataBytes.length; i += chunkSize) {
     const chunk = dataBytes.slice(i, i + chunkSize);
@@ -221,6 +221,7 @@ export function eccEncrypt(
     encryptedPairs.push({
       c1: `${bigIntToHex(C1.x, 32)}:${bigIntToHex(C1.y, 32)}`,
       c2: `${bigIntToHex(C2.x, 32)}:${bigIntToHex(C2.y, 32)}`,
+      l: chunk.length,
     });
   }
 
@@ -248,7 +249,8 @@ export function eccDecrypt(ciphertext: string, privateKey: ECCPrivateKey): strin
 
     const decryptedChunks: Uint8Array[] = [];
 
-    for (const block of envelope.blocks) {
+    for (let idx = 0; idx < envelope.blocks.length; idx++) {
+      const block = envelope.blocks[idx];
       const [c1xHex, c1yHex] = block.c1.split(":");
       const [c2xHex, c2yHex] = block.c2.split(":");
 
@@ -265,7 +267,8 @@ export function eccDecrypt(ciphertext: string, privateKey: ECCPrivateKey): strin
       }
 
       const mInt = decodePointToMessage(M);
-      const chunkBytes = bigIntToBytes(mInt);
+      const minLen = typeof block.l === "number" ? block.l : (idx === envelope.blocks.length - 1 ? 0 : 24);
+      const chunkBytes = bigIntToBytes(mInt, minLen);
       decryptedChunks.push(chunkBytes);
     }
 

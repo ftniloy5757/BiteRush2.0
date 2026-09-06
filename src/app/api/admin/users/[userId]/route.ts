@@ -45,6 +45,15 @@ export async function GET(req: NextRequest, context: any) {
     const userObj = user.toObject();
     try {
       const { CryptoService } = await import("@/lib/crypto/cryptoService");
+      const sanitizeField = (val: any) => {
+        if (!val || typeof val !== "string") return "";
+        const trimmed = val.trim();
+        if (trimmed.startsWith("{") || trimmed.includes("RSA-1024") || trimmed === "[ENCRYPTED]") {
+          return "";
+        }
+        return trimmed;
+      };
+
       if (user.firstNameEncrypted) {
         userObj.firstName = CryptoService.decryptProfile(user.firstNameEncrypted);
       }
@@ -52,7 +61,10 @@ export async function GET(req: NextRequest, context: any) {
         userObj.lastName = CryptoService.decryptProfile(user.lastNameEncrypted);
       }
       if (user.emailEncrypted) {
-        userObj.email = CryptoService.decryptProfile(user.emailEncrypted);
+        const decryptedEmail = CryptoService.decryptProfile(user.emailEncrypted);
+        if (decryptedEmail && !decryptedEmail.startsWith("{")) {
+          userObj.email = decryptedEmail;
+        }
       }
       if (user.contactNumberEncrypted) {
         userObj.contactNumber = CryptoService.decryptProfile(user.contactNumberEncrypted);
@@ -65,6 +77,24 @@ export async function GET(req: NextRequest, context: any) {
       }
       if (user.vehicleTypeEncrypted) {
         userObj.vehicleType = CryptoService.decryptProfile(user.vehicleTypeEncrypted);
+      }
+
+      userObj.firstName = sanitizeField(userObj.firstName);
+      userObj.lastName = sanitizeField(userObj.lastName);
+      userObj.contactNumber = sanitizeField(userObj.contactNumber);
+      userObj.restaurantName = sanitizeField(userObj.restaurantName);
+      userObj.restaurantAddress = sanitizeField(userObj.restaurantAddress);
+      userObj.vehicleType = sanitizeField(userObj.vehicleType);
+
+      if (!userObj.firstName && !userObj.lastName) {
+        if (userObj.email && typeof userObj.email === "string" && !userObj.email.startsWith("{")) {
+          const prefix = userObj.email.split("@")[0];
+          userObj.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+          userObj.lastName = "";
+        } else {
+          userObj.firstName = (userObj.role ? userObj.role.charAt(0).toUpperCase() + userObj.role.slice(1) : "User");
+          userObj.lastName = `#${String(userObj._id).slice(-4)}`;
+        }
       }
     } catch {}
 

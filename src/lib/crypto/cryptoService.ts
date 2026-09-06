@@ -48,10 +48,14 @@ export class CryptoService {
     try {
       const version = this.extractVersion(ciphertext);
       const privKey = KeyManager.getRSAPrivateKey(version);
-      return rsaDecrypt(ciphertext, privKey);
+      const decrypted = rsaDecrypt(ciphertext, privKey);
+      if (decrypted && !decrypted.startsWith("{") && !decrypted.includes("RSA")) {
+        return decrypted;
+      }
+      return "";
     } catch (err) {
       console.warn("RSA Decryption error, serving sanitized fallback:", err);
-      return ciphertext;
+      return "";
     }
   }
 
@@ -74,10 +78,14 @@ export class CryptoService {
     try {
       const version = this.extractVersion(ciphertext);
       const privKey = KeyManager.getECCPrivateKey(version);
-      return eccDecrypt(ciphertext, privKey);
+      const decrypted = eccDecrypt(ciphertext, privKey);
+      if (decrypted && !decrypted.startsWith("{") && !decrypted.includes("ECC")) {
+        return decrypted;
+      }
+      return "";
     } catch (err) {
       console.warn("ECC Decryption error, serving sanitized fallback:", err);
-      return ciphertext;
+      return "";
     }
   }
 

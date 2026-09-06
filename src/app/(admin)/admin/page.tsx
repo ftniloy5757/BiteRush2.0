@@ -1,6 +1,6 @@
 // app/admin/page.tsx
 import Link from "next/link";
-import { Users, Utensils, ShoppingBag, UserPlus, ShieldCheck, KeyRound, ArrowRight } from "lucide-react";
+import { Users, Utensils, ShoppingBag, UserPlus, ShieldCheck, ArrowRight } from "lucide-react";
 
 interface DashboardCardProps {
   href: string;
@@ -83,25 +83,16 @@ export default function AdminDashboard() {
     <div className="space-y-8 pb-12">
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-3xl p-8 sm:p-10 text-white shadow-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6">
-        <div className="space-y-2 max-w-xl">
-          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-xs font-bold">
-            <ShieldCheck className="h-3.5 w-3.5" /> System Administration Portal
+        <div className="space-y-2 max-w-2xl">
+          <div className="inline-flex items-center gap-1.5 bg-white/20 backdrop-blur-md px-3.5 py-1.5 rounded-full text-xs font-bold">
+            <ShieldCheck className="h-4 w-4" /> System Administration Portal
           </div>
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight">
             Admin Operations Center
           </h1>
           <p className="text-orange-100 text-xs sm:text-sm leading-relaxed">
-            Manage users, dishes, customer orders, and cryptographic keyrings across BiteRush 2.0 with end-to-end security.
+            Manage users, menu items, live customer orders, and access control across BiteRush 2.0.
           </p>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-xs space-y-1.5 shrink-0">
-          <div className="font-bold flex items-center gap-1.5">
-            <KeyRound className="h-4 w-4" /> Cryptographic Status
-          </div>
-          <div className="text-orange-100">PII: RSA-1024-PKCS1 ✓</div>
-          <div className="text-orange-100">Orders: ECC-SECP256K1 ✓</div>
-          <div className="text-orange-100">Integrity: HMAC-SHA256 ✓</div>
         </div>
       </div>
 

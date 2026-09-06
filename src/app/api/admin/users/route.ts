@@ -60,6 +60,15 @@ export async function GET(req: NextRequest) {
 
     // Decrypt RSA fields for admin
     const { CryptoService } = await import("@/lib/crypto/cryptoService");
+    const sanitizeField = (val: any) => {
+      if (!val || typeof val !== "string") return "";
+      const trimmed = val.trim();
+      if (trimmed.startsWith("{") || trimmed.includes("RSA-1024") || trimmed === "[ENCRYPTED]") {
+        return "";
+      }
+      return trimmed;
+    };
+
     const users = rawUsers.map((u) => {
       const obj = u.toObject();
       if (obj.firstNameEncrypted) {
@@ -69,7 +78,10 @@ export async function GET(req: NextRequest) {
         obj.lastName = CryptoService.decryptProfile(obj.lastNameEncrypted);
       }
       if (obj.emailEncrypted) {
-        obj.email = CryptoService.decryptProfile(obj.emailEncrypted);
+        const decryptedEmail = CryptoService.decryptProfile(obj.emailEncrypted);
+        if (decryptedEmail && !decryptedEmail.startsWith("{")) {
+          obj.email = decryptedEmail;
+        }
       }
       if (obj.contactNumberEncrypted) {
         obj.contactNumber = CryptoService.decryptProfile(obj.contactNumberEncrypted);
@@ -83,6 +95,26 @@ export async function GET(req: NextRequest) {
       if (obj.vehicleTypeEncrypted) {
         obj.vehicleType = CryptoService.decryptProfile(obj.vehicleTypeEncrypted);
       }
+
+      obj.firstName = sanitizeField(obj.firstName);
+      obj.lastName = sanitizeField(obj.lastName);
+      obj.contactNumber = sanitizeField(obj.contactNumber);
+      obj.restaurantName = sanitizeField(obj.restaurantName);
+      obj.restaurantAddress = sanitizeField(obj.restaurantAddress);
+      obj.vehicleType = sanitizeField(obj.vehicleType);
+
+      // Clean fallback if names are empty or ciphertext
+      if (!obj.firstName && !obj.lastName) {
+        if (obj.email && typeof obj.email === "string" && !obj.email.startsWith("{")) {
+          const prefix = obj.email.split("@")[0];
+          obj.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+          obj.lastName = "";
+        } else {
+          obj.firstName = (obj.role ? obj.role.charAt(0).toUpperCase() + obj.role.slice(1) : "User");
+          obj.lastName = `#${String(obj._id).slice(-4)}`;
+        }
+      }
+
       return obj;
     });
 

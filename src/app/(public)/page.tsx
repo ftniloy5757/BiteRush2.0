@@ -49,18 +49,18 @@ export default async function Home() {
               </div>
             </div>
 
-            <div className="relative">
-              <div className="aspect-[16/9] sm:aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/30 relative bg-orange-950/20">
+            <div className="relative w-full">
+              <div className="aspect-[1672/941] w-full rounded-3xl overflow-hidden shadow-2xl border-4 border-white/30 relative bg-zinc-950/40">
                 <Image
                   src="/BiteRush2_Cover.png"
                   alt="BiteRush Official Cover"
                   fill
-                  className="object-cover"
+                  className="object-contain"
                   priority
                 />
               </div>
-              {/* Floating feature badge */}
-              <div className="absolute -bottom-4 -left-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-3.5 rounded-2xl shadow-xl flex items-center gap-3 border border-orange-100 dark:border-gray-800">
+              {/* Floating feature badge positioned cleanly */}
+              <div className="absolute -bottom-4 -right-2 sm:-bottom-4 sm:right-4 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 p-3.5 rounded-2xl shadow-xl flex items-center gap-3 border border-orange-100 dark:border-gray-800 z-10">
                 <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-950 flex items-center justify-center text-orange-600">
                   <Clock className="h-5 w-5" />
                 </div>
