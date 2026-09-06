@@ -63,11 +63,19 @@ export async function GET(req: NextRequest) {
     const sanitizeField = (val: any) => {
       if (!val || typeof val !== "string") return "";
       const trimmed = val.trim();
-      if (trimmed.startsWith("{") || trimmed.includes("RSA-1024") || trimmed === "[ENCRYPTED]") {
+      if (
+        trimmed.startsWith("{") ||
+        trimmed.includes("RSA-1024") ||
+        trimmed.includes("alg") ||
+        trimmed.toUpperCase() === "[ENCRYPTED]" ||
+        trimmed.includes("[ENCRYPTED]")
+      ) {
         return "";
       }
       return trimmed;
     };
+
+    const { findDynamicUserById } = await import("@/lib/dynamicUsersStore");
 
     const users = rawUsers.map((u) => {
       const obj = u.toObject();
@@ -98,19 +106,31 @@ export async function GET(req: NextRequest) {
 
       obj.firstName = sanitizeField(obj.firstName);
       obj.lastName = sanitizeField(obj.lastName);
+      obj.email = sanitizeField(obj.email);
       obj.contactNumber = sanitizeField(obj.contactNumber);
       obj.restaurantName = sanitizeField(obj.restaurantName);
       obj.restaurantAddress = sanitizeField(obj.restaurantAddress);
       obj.vehicleType = sanitizeField(obj.vehicleType);
 
-      // Clean fallback if names are empty or ciphertext
+      // Check dynamic store if any field is empty or failed decryption
+      try {
+        const dyn = findDynamicUserById(String(obj._id));
+        if (dyn) {
+          if (!obj.firstName) obj.firstName = sanitizeField(dyn.firstName);
+          if (!obj.lastName) obj.lastName = sanitizeField(dyn.lastName);
+          if (!obj.email) obj.email = sanitizeField(dyn.email);
+          if (!obj.contactNumber) obj.contactNumber = sanitizeField(dyn.contactNumber);
+        }
+      } catch {}
+
+      // Clean fallback if names are empty
       if (!obj.firstName && !obj.lastName) {
-        if (obj.email && typeof obj.email === "string" && !obj.email.startsWith("{")) {
+        if (obj.email) {
           const prefix = obj.email.split("@")[0];
           obj.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
           obj.lastName = "";
         } else {
-          obj.firstName = (obj.role ? obj.role.charAt(0).toUpperCase() + obj.role.slice(1) : "User");
+          obj.firstName = (obj.role ? obj.role.charAt(0).toUpperCase() + obj.role.slice(1) : "Customer");
           obj.lastName = `#${String(obj._id).slice(-4)}`;
         }
       }

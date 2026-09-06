@@ -157,7 +157,8 @@ export default function AdminUsersPage() {
         trimmed.startsWith("{") ||
         trimmed.includes("RSA-1024") ||
         trimmed.includes("alg") ||
-        trimmed === "[ENCRYPTED]"
+        trimmed.toUpperCase() === "[ENCRYPTED]" ||
+        trimmed.includes("[ENCRYPTED]")
       ) {
         return "";
       }
@@ -170,19 +171,20 @@ export default function AdminUsersPage() {
       return `${fn} ${ln}`.trim();
     }
 
-    if (user.email && typeof user.email === "string" && !user.email.startsWith("{")) {
-      const prefix = user.email.split("@")[0];
+    const cleanEmail = sanitize(user.email);
+    if (cleanEmail) {
+      const prefix = cleanEmail.split("@")[0];
       return prefix.charAt(0).toUpperCase() + prefix.slice(1);
     }
 
-    return `${user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "User"} #${String(
+    return `${user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Customer"} #${String(
       user._id || ""
     ).slice(-4)}`;
   };
 
   // Helper: Initials
   const getUserInitials = (name: string) => {
-    if (!name) return "U";
+    if (!name || name.includes("[ENCRYPTED]")) return "U";
     const parts = name.trim().split(" ");
     if (parts.length >= 2 && parts[0] && parts[1]) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -379,7 +381,9 @@ export default function AdminUsersPage() {
                         {/* Email */}
                         <TableCell className="py-4 max-w-[240px]">
                           <span className="text-xs text-gray-700 dark:text-gray-300 font-mono truncate block">
-                            {user.email && !user.email.startsWith("{") ? user.email : "—"}
+                            {user.email && !user.email.startsWith("{") && !user.email.includes("[ENCRYPTED]")
+                              ? user.email
+                              : "—"}
                           </span>
                         </TableCell>
 

@@ -48,7 +48,13 @@ export async function GET(req: NextRequest, context: any) {
       const sanitizeField = (val: any) => {
         if (!val || typeof val !== "string") return "";
         const trimmed = val.trim();
-        if (trimmed.startsWith("{") || trimmed.includes("RSA-1024") || trimmed === "[ENCRYPTED]") {
+        if (
+          trimmed.startsWith("{") ||
+          trimmed.includes("RSA-1024") ||
+          trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+          trimmed === "undefined" ||
+          trimmed === "null"
+        ) {
           return "";
         }
         return trimmed;
@@ -81,18 +87,30 @@ export async function GET(req: NextRequest, context: any) {
 
       userObj.firstName = sanitizeField(userObj.firstName);
       userObj.lastName = sanitizeField(userObj.lastName);
+      userObj.email = sanitizeField(userObj.email);
       userObj.contactNumber = sanitizeField(userObj.contactNumber);
       userObj.restaurantName = sanitizeField(userObj.restaurantName);
       userObj.restaurantAddress = sanitizeField(userObj.restaurantAddress);
       userObj.vehicleType = sanitizeField(userObj.vehicleType);
 
+      try {
+        const { findDynamicUserById } = await import("@/lib/dynamicUsersStore");
+        const dyn = findDynamicUserById(String(userObj._id));
+        if (dyn) {
+          if (!userObj.firstName) userObj.firstName = sanitizeField(dyn.firstName);
+          if (!userObj.lastName) userObj.lastName = sanitizeField(dyn.lastName);
+          if (!userObj.email) userObj.email = sanitizeField(dyn.email);
+          if (!userObj.contactNumber) userObj.contactNumber = sanitizeField(dyn.contactNumber);
+        }
+      } catch {}
+
       if (!userObj.firstName && !userObj.lastName) {
-        if (userObj.email && typeof userObj.email === "string" && !userObj.email.startsWith("{")) {
+        if (userObj.email) {
           const prefix = userObj.email.split("@")[0];
           userObj.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
           userObj.lastName = "";
         } else {
-          userObj.firstName = (userObj.role ? userObj.role.charAt(0).toUpperCase() + userObj.role.slice(1) : "User");
+          userObj.firstName = (userObj.role ? userObj.role.charAt(0).toUpperCase() + userObj.role.slice(1) : "Customer");
           userObj.lastName = `#${String(userObj._id).slice(-4)}`;
         }
       }

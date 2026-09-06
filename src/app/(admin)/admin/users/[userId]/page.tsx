@@ -79,20 +79,34 @@ export default function EditUserPage() {
     },
   });
 
+const cleanInput = (val?: string | null) => {
+  if (!val || typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (
+    trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+    trimmed.startsWith("{") ||
+    trimmed === "undefined" ||
+    trimmed === "null"
+  ) {
+    return "";
+  }
+  return trimmed;
+};
+
   // Update form values when user data is loaded
   useEffect(() => {
     if (user) {
       form.reset({
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
+        firstName: cleanInput(user.firstName),
+        lastName: cleanInput(user.lastName),
+        email: cleanInput(user.email),
         password: "", // Don't populate password
         role: user.role || "customer",
-        restaurantName: user.restaurantName || "",
-        restaurantAddress: user.restaurantAddress || "",
-        vehicleType: user.vehicleType || "",
-        bio: user.bio || "",
-        contactNumber: user.contactNumber || "",
+        restaurantName: cleanInput(user.restaurantName),
+        restaurantAddress: cleanInput(user.restaurantAddress),
+        vehicleType: cleanInput(user.vehicleType),
+        bio: cleanInput(user.bio),
+        contactNumber: cleanInput(user.contactNumber),
         themePreference: user.themePreference || "light",
         status: user.status || "Online",
         isEmailVerified: !!user.isEmailVerified,
@@ -227,7 +241,7 @@ export default function EditUserPage() {
           <CardDescription>
             {userId === "new"
               ? "Add a new user to the system"
-              : `Editing user: ${user?.firstName} ${user?.lastName}`}
+              : `Editing user: ${[cleanInput(user?.firstName), cleanInput(user?.lastName)].filter(Boolean).join(" ").trim() || cleanInput(user?.email) || (typeof userId === "string" ? `#${userId.slice(-6)}` : "User")}`}
           </CardDescription>
         </CardHeader>
         <CardContent>
