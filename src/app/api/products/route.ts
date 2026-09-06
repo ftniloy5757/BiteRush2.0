@@ -65,6 +65,25 @@ export async function GET(req: NextRequest) {
           return prodObj;
         });
 
+        // Merge any initial products not already present in the DB results
+        const { INITIAL_PRODUCTS } = await import("@/lib/initialProducts");
+        for (const ip of INITIAL_PRODUCTS) {
+          const exists = sanitizedProducts.some(
+            (sp) => sp.name?.toLowerCase().trim() === ip.name.toLowerCase().trim()
+          );
+          if (!exists) {
+            let match = true;
+            if (category && category !== "all" && ip.category.toLowerCase() !== category.toLowerCase()) match = false;
+            if (featured === "true" && !ip.featured) match = false;
+            if (minPrice && ip.price < parseFloat(minPrice)) match = false;
+            if (maxPrice && ip.price > parseFloat(maxPrice)) match = false;
+            if (minRating && ip.rating < parseFloat(minRating)) match = false;
+            if (match) {
+              sanitizedProducts.push(ip);
+            }
+          }
+        }
+
         return NextResponse.json(sanitizedProducts, { status: 200 });
       }
     }

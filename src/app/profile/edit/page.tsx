@@ -84,24 +84,7 @@ export default function EditProfilePage() {
         if (data.savedAddresses && Array.isArray(data.savedAddresses)) {
           setAddresses(data.savedAddresses);
         } else {
-          setAddresses([
-            {
-              id: "addr-1",
-              label: "Home",
-              address: "Dhanmondi 19 House No. 226/A",
-              area: "Dhanmondi",
-              details: "Please give a call 10 minutes before reaching",
-              isDefault: true,
-            },
-            {
-              id: "addr-2",
-              label: "Office",
-              address: "House 15, Road 5, Block B",
-              area: "Gulshan",
-              details: "Leave at front desk reception",
-              isDefault: false,
-            },
-          ]);
+          setAddresses([]);
         }
       } catch (error) {
         console.error("Error fetching profile:", error);

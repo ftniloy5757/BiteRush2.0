@@ -159,6 +159,8 @@ export async function PUT(
           post.integrityMac = integrityMac;
           post.cryptoVersion = KeyManager.getActiveVersion();
           if (category) post.category = category;
+          const userDisp = `${session.user.firstName || ""} ${session.user.lastName || ""}`.trim();
+          if (userDisp) post.authorName = userDisp;
 
           await post.save();
 

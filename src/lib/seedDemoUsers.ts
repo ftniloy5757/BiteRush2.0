@@ -67,87 +67,10 @@ const demoUsers = [
   },
 ];
 
-// Exactly 6 ready-made testing menu items covering all key categories
-const demoProducts = [
-  {
-    name: "Classic Flame-Grilled Beef Burger",
-    description: "Juicy hand-pressed prime beef patty with crisp lettuce, ripe tomatoes, cheddar cheese, and signature smoky relish in a toasted brioche bun.",
-    price: 350,
-    category: "burger",
-    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=600&h=450&fit=crop",
-    rating: 4.8,
-    numReviews: 142,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "12-15 min",
-  },
-  {
-    name: "Spicy Crispy Zinger Chicken Burger",
-    description: "Golden fried crunchy chicken breast fillet tossed in spicy seasoning, topped with jalapeño slaw and melted pepper jack cheese.",
-    price: 320,
-    category: "burger",
-    image: "https://images.unsplash.com/photo-1525164286253-04e68b9d94c6?w=600&h=450&fit=crop",
-    rating: 4.7,
-    numReviews: 98,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "15 min",
-  },
-  {
-    name: "Artisanal Pepperoni Passion Pizza",
-    description: "Stone-baked Italian sourdough crust loaded with premium beef pepperoni, roasted garlic tomato sauce, and molten mozzarella.",
-    price: 650,
-    category: "pizza",
-    image: "https://images.unsplash.com/photo-1628840042765-356cda07504e?w=600&h=450&fit=crop",
-    rating: 4.9,
-    numReviews: 215,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "20-25 min",
-  },
-  {
-    name: "Creamy Truffle Mushroom Alfredo Pasta",
-    description: "Fettuccine pasta tossed in velvety parmesan alfredo sauce infused with black truffle oil and pan-sautéed cremini mushrooms.",
-    price: 450,
-    category: "pasta",
-    image: "https://images.unsplash.com/photo-1645112411341-6c4fd023714a?w=600&h=450&fit=crop",
-    rating: 4.6,
-    numReviews: 87,
-    inStock: true,
-    isAvailable: true,
-    featured: true,
-    prepTime: "15-18 min",
-  },
-  {
-    name: "Warm Belgian Chocolate Lava Cake",
-    description: "Decadent dark chocolate cake with a rich molten center, served warm with vanilla cream and chocolate shavings.",
-    price: 260,
-    category: "dessert",
-    image: "https://images.unsplash.com/photo-1624353365286-3f8d62daad51?w=600&h=450&fit=crop",
-    rating: 4.9,
-    numReviews: 180,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "8-10 min",
-  },
-  {
-    name: "Iced Caramel Macchiato Cooler",
-    description: "Rich espresso layered over fresh chilled milk and vanilla, topped with buttery caramel drizzle and crushed ice.",
-    price: 180,
-    category: "drink",
-    image: "https://images.unsplash.com/photo-1461023058943-07fcbe16d735?w=600&h=450&fit=crop",
-    rating: 4.5,
-    numReviews: 110,
-    inStock: true,
-    isAvailable: true,
-    featured: false,
-    prepTime: "5 min",
-  },
-];
+import { INITIAL_PRODUCTS } from "@/lib/initialProducts";
+
+// Consolidated 13 testing & production menu items covering all key categories
+const demoProducts = INITIAL_PRODUCTS.map(({ _id, createdAt, updatedAt, ...rest }) => rest);
 
 import mongoose from "mongoose";
 import { DEMO_USERS, DEMO_IDS } from "@/lib/demoData";
@@ -224,14 +147,39 @@ export async function seedDemoData() {
     createdUsers[userData.role] = user;
   }
 
-  // 2. Seed Initial Products only if collection is empty
-  const productCount = await Product.countDocuments();
-  let products;
-  if (productCount === 0) {
-    products = await Product.insertMany(demoProducts);
-  } else {
-    products = await Product.find().sort({ createdAt: 1 });
+  // 2. Synchronize Unified Products: ensure all 13 items exist and are available in MongoDB
+  for (const dp of demoProducts) {
+    const existing = await Product.findOne({
+      $or: [
+        { name: dp.name },
+        { name: new RegExp(`^${dp.name.trim()}$`, "i") },
+      ],
+    });
+    if (!existing) {
+      await Product.create({
+        ...dp,
+        isAvailable: true,
+        inStock: true,
+        featured: dp.featured ?? true,
+      });
+    } else {
+      let changed = false;
+      if (existing.isAvailable === undefined || existing.isAvailable === false) {
+        existing.isAvailable = true;
+        changed = true;
+      }
+      if (existing.inStock === undefined || existing.inStock === false) {
+        existing.inStock = true;
+        changed = true;
+      }
+      if (dp.featured && !existing.featured) {
+        existing.featured = true;
+        changed = true;
+      }
+      if (changed) await existing.save();
+    }
   }
+  const products = await Product.find().sort({ createdAt: 1 });
 
   // 3. Seed Realistic Multi-State Orders for all test profiles if empty
   const customer = createdUsers["customer"];

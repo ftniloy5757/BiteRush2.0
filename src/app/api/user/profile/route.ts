@@ -62,6 +62,8 @@ export async function GET() {
       console.warn("DB error in profile route, will use session fallback:", dbErr);
     }
 
+    const isDemoCustomer = sessionEmail === "customer@biterush.com" || userId === "demo-customer-001";
+
     // If not found in DB, check dynamic users store, DEMO_USERS, or construct from session
     if (!u) {
       const { findDynamicUserById, findDynamicUserByEmail } = await import("@/lib/dynamicUsersStore");
@@ -72,8 +74,8 @@ export async function GET() {
           firstName: dyn.firstName || session.user.firstName || "Customer",
           lastName: dyn.lastName || session.user.lastName || "",
           email: dyn.email || session.user.email || "",
-          contactNumber: dyn.contactNumber || session.user.contactNumber || "+8801740734780",
-          bio: "Food enthusiast & loyal BiteRush customer.",
+          contactNumber: dyn.contactNumber || session.user.contactNumber || (isDemoCustomer ? "+8801740734780" : ""),
+          bio: dyn.bio || (isDemoCustomer ? "Food enthusiast & loyal BiteRush customer." : ""),
           restaurantName: dyn.restaurantName || null,
           restaurantAddress: dyn.restaurantAddress || null,
           vehicleType: dyn.vehicleType || null,
@@ -84,7 +86,7 @@ export async function GET() {
           isPhoneVerified: true,
           isEmailVerified: dyn.isEmailVerified !== false,
           isTwoFactorEnabled: dyn.isTwoFactorEnabled !== false,
-          savedAddresses: dyn.savedAddresses && dyn.savedAddresses.length > 0 ? dyn.savedAddresses : DEFAULT_ADDRESSES,
+          savedAddresses: Array.isArray(dyn.savedAddresses) ? dyn.savedAddresses : (isDemoCustomer ? DEFAULT_ADDRESSES : []),
           createdAt: dyn.createdAt || new Date().toISOString(),
           updatedAt: dyn.updatedAt || new Date().toISOString(),
         });
@@ -99,8 +101,8 @@ export async function GET() {
         firstName: session.user.firstName || matchedDemo?.firstName || "Customer",
         lastName: session.user.lastName || matchedDemo?.lastName || "",
         email: session.user.email || matchedDemo?.email || "customer@biterush.com",
-        contactNumber: session.user.contactNumber || matchedDemo?.contactNumber || "+8801740734780",
-        bio: "Food enthusiast & loyal BiteRush customer.",
+        contactNumber: session.user.contactNumber || matchedDemo?.contactNumber || (isDemoCustomer ? "+8801740734780" : ""),
+        bio: isDemoCustomer ? "Food enthusiast & loyal BiteRush customer." : "",
         restaurantName: session.user.restaurantName || matchedDemo?.restaurantName || null,
         restaurantAddress: null,
         vehicleType: session.user.vehicleType || matchedDemo?.vehicleType || null,
@@ -111,7 +113,7 @@ export async function GET() {
         isPhoneVerified: true,
         isEmailVerified: true,
         isTwoFactorEnabled: true,
-        savedAddresses: DEFAULT_ADDRESSES,
+        savedAddresses: isDemoCustomer ? DEFAULT_ADDRESSES : [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         cryptoVersion: 1,
@@ -141,10 +143,10 @@ export async function GET() {
       : u.email;
     const contactNumber = u.contactNumberEncrypted
       ? CryptoService.decryptProfile(u.contactNumberEncrypted)
-      : u.contactNumber || session.user.contactNumber || "+8801740734780";
+      : u.contactNumber || session.user.contactNumber || (isDemoCustomer ? "+8801740734780" : "");
     const bio = u.bioEncrypted
       ? CryptoService.decryptProfile(u.bioEncrypted)
-      : u.bio || "Food enthusiast & loyal BiteRush customer.";
+      : u.bio || (isDemoCustomer ? "Food enthusiast & loyal BiteRush customer." : "");
     const restaurantName = u.restaurantNameEncrypted
       ? CryptoService.decryptProfile(u.restaurantNameEncrypted)
       : u.restaurantName || null;
@@ -175,7 +177,7 @@ export async function GET() {
       savedAddresses:
         u.savedAddresses && u.savedAddresses.length > 0
           ? u.savedAddresses
-          : DEFAULT_ADDRESSES,
+          : (isDemoCustomer ? DEFAULT_ADDRESSES : []),
       createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
       updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
       cryptoVersion: u.cryptoVersion || 1,

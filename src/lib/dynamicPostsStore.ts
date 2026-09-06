@@ -18,13 +18,41 @@ export interface DynamicPost {
   updatedAt: string;
 }
 
+// Generate consistent ciphertexts and matching HMAC tags for initial seed posts
+const burgerTitleEnc = CryptoService.encryptOrderField("Best Burgers in Dhaka!");
+const burgerContentEnc = CryptoService.encryptOrderField("The Flame-Grilled Beef Burger from BiteRush is genuinely out of this world. Super juicy patty and perfectly toasted brioche buns!");
+const burgerMac = CryptoService.generateIntegrityMac({
+  titleEncrypted: burgerTitleEnc,
+  contentEncrypted: burgerContentEnc,
+  author: DEMO_IDS.CUSTOMER,
+  category: "Food Review",
+});
+
+const pastaTitleEnc = CryptoService.encryptOrderField("Pasta Review");
+const pastaContentEnc = CryptoService.encryptOrderField("The pasta tasted good but the appetizers provided along with the pasta was not upto the mark. Overall taste was above average.");
+const pastaMac = CryptoService.generateIntegrityMac({
+  titleEncrypted: pastaTitleEnc,
+  contentEncrypted: pastaContentEnc,
+  author: "65f300000000000000000099",
+  category: "Food Review",
+});
+
+const healthyTitleEnc = CryptoService.encryptOrderField("Healthy Low-Calorie Pasta Option");
+const healthyContentEnc = CryptoService.encryptOrderField("Asked chef for lighter olive oil drizzle and whole wheat option. Absolutely loved it! High protein and delicious.");
+const healthyMac = CryptoService.generateIntegrityMac({
+  titleEncrypted: healthyTitleEnc,
+  contentEncrypted: healthyContentEnc,
+  author: DEMO_IDS.CUSTOMER,
+  category: "Diet & Recipes",
+});
+
 const INITIAL_POSTS: DynamicPost[] = [
   {
     _id: "65f300000000000000000001",
     title: "Best Burgers in Dhaka!",
     content: "The Flame-Grilled Beef Burger from BiteRush is genuinely out of this world. Super juicy patty and perfectly toasted brioche buns!",
-    titleEncrypted: CryptoService.encryptOrderField("Best Burgers in Dhaka!"),
-    contentEncrypted: CryptoService.encryptOrderField("The Flame-Grilled Beef Burger from BiteRush is genuinely out of this world. Super juicy patty and perfectly toasted brioche buns!"),
+    titleEncrypted: burgerTitleEnc,
+    contentEncrypted: burgerContentEnc,
     category: "Food Review",
     author: {
       _id: DEMO_IDS.CUSTOMER,
@@ -35,21 +63,36 @@ const INITIAL_POSTS: DynamicPost[] = [
     authorName: "Niloy Farhan",
     likes: 12,
     cryptoVersion: 1,
-    integrityMac: CryptoService.generateIntegrityMac({
-      titleEncrypted: CryptoService.encryptOrderField("Best Burgers in Dhaka!"),
-      contentEncrypted: CryptoService.encryptOrderField("The Flame-Grilled Beef Burger from BiteRush is genuinely out of this world. Super juicy patty and perfectly toasted brioche buns!"),
-      author: DEMO_IDS.CUSTOMER,
-      category: "Food Review",
-    }),
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 2).toISOString(),
+    integrityMac: burgerMac,
+    createdAt: new Date(Date.now() - 3600000 * 24).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 24).toISOString(),
   },
   {
     _id: "65f300000000000000000002",
+    title: "Pasta Review",
+    content: "The pasta tasted good but the appetizers provided along with the pasta was not upto the mark. Overall taste was above average.",
+    titleEncrypted: pastaTitleEnc,
+    contentEncrypted: pastaContentEnc,
+    category: "Food Review",
+    author: {
+      _id: "65f300000000000000000099",
+      firstName: "Fardin",
+      lastName: "Khan",
+      role: "customer",
+    },
+    authorName: "Fardin Khan",
+    likes: 8,
+    cryptoVersion: 1,
+    integrityMac: pastaMac,
+    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+  },
+  {
+    _id: "65f300000000000000000003",
     title: "Healthy Low-Calorie Pasta Option",
     content: "Asked chef for lighter olive oil drizzle and whole wheat option. Absolutely loved it! High protein and delicious.",
-    titleEncrypted: CryptoService.encryptOrderField("Healthy Low-Calorie Pasta Option"),
-    contentEncrypted: CryptoService.encryptOrderField("Asked chef for lighter olive oil drizzle and whole wheat option. Absolutely loved it! High protein and delicious."),
+    titleEncrypted: healthyTitleEnc,
+    contentEncrypted: healthyContentEnc,
     category: "Diet & Recipes",
     author: {
       _id: DEMO_IDS.CUSTOMER,
@@ -60,14 +103,9 @@ const INITIAL_POSTS: DynamicPost[] = [
     authorName: "Niloy Farhan",
     likes: 7,
     cryptoVersion: 1,
-    integrityMac: CryptoService.generateIntegrityMac({
-      titleEncrypted: CryptoService.encryptOrderField("Healthy Low-Calorie Pasta Option"),
-      contentEncrypted: CryptoService.encryptOrderField("Asked chef for lighter olive oil drizzle and whole wheat option. Absolutely loved it! High protein and delicious."),
-      author: DEMO_IDS.CUSTOMER,
-      category: "Diet & Recipes",
-    }),
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000 * 5).toISOString(),
+    integrityMac: healthyMac,
+    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
+    updatedAt: new Date(Date.now() - 3600000 * 12).toISOString(),
   },
 ];
 
@@ -81,13 +119,13 @@ if (!global.dynamicPosts) {
 }
 
 export const getDynamicPosts = (category?: string): DynamicPost[] => {
-  if (!global.dynamicPosts) {
+  if (!global.dynamicPosts || global.dynamicPosts.length === 0) {
     global.dynamicPosts = [...INITIAL_POSTS];
   }
   let posts = [...global.dynamicPosts];
-  if (category && category !== "all") {
+  if (category && category.toLowerCase() !== "all") {
     posts = posts.filter(
-      (p) => p.category.toLowerCase() === category.toLowerCase()
+      (p) => p.category.toLowerCase().trim() === category.toLowerCase().trim()
     );
   }
   return posts;
@@ -129,7 +167,7 @@ export const addDynamicPost = (data: {
     author: {
       _id: data.authorId,
       firstName: data.authorName.split(" ")[0] || "User",
-      lastName: data.authorName.split(" ")[1] || "",
+      lastName: data.authorName.split(" ").slice(1).join(" ") || "",
       role: "customer",
     },
     authorName: data.authorName,

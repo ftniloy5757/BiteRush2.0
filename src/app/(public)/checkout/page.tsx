@@ -89,13 +89,14 @@ export default function CheckoutPage() {
         console.warn("Could not load user profile addresses:", err);
       }
 
+      const isDemo = session?.user?.email?.toLowerCase() === "customer@biterush.com";
       // Fallback auto-population from session
       setFormData((prev) => ({
         ...prev,
-        name: defaultName || prev.name || "Customer",
-        email: defaultEmail || prev.email || "customer@biterush.com",
-        phone: defaultPhone || prev.phone || "+8801740734780",
-        address: prev.address || "Dhanmondi 19 House No. 226/A",
+        name: defaultName || prev.name || (isDemo ? "Customer" : ""),
+        email: defaultEmail || prev.email || (isDemo ? "customer@biterush.com" : ""),
+        phone: defaultPhone || prev.phone || (isDemo ? "+8801740734780" : ""),
+        address: prev.address || (isDemo ? "Dhanmondi 19 House No. 226/A" : ""),
         area: prev.area || "Dhanmondi",
       }));
     }

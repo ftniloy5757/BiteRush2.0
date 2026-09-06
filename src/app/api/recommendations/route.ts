@@ -36,15 +36,15 @@ export async function GET() {
           if (sortedCategories.length > 0) {
             const preferredProducts = await Product.find({
               category: { $in: sortedCategories.slice(0, 3) },
-              isAvailable: true,
-              inStock: true,
+              inStock: { $ne: false },
+              isAvailable: { $ne: false },
             })
               .sort({ rating: -1 })
               .limit(6);
 
             const featuredProducts = await Product.find({
-              isAvailable: true,
-              inStock: true,
+              inStock: { $ne: false },
+              isAvailable: { $ne: false },
               _id: { $nin: preferredProducts.map((p) => p._id) },
             })
               .sort({ rating: -1, numReviews: -1 })
@@ -71,9 +71,11 @@ export async function GET() {
           }
         }
 
-        const featured = await Product.find({ featured: true, isAvailable: true, inStock: true }).limit(6);
-        const popular = await Product.find({ isAvailable: true, inStock: true })
-          .sort({ rating: -1, numReviews: -1 })
+        const featured = await Product.find({ inStock: { $ne: false }, isAvailable: { $ne: false } })
+          .sort({ featured: -1, rating: -1, createdAt: -1 })
+          .limit(6);
+        const popular = await Product.find({ inStock: { $ne: false }, isAvailable: { $ne: false } })
+          .sort({ rating: -1, numReviews: -1, createdAt: -1 })
           .limit(6);
 
         const sanitizeList = (list: any[]) =>
@@ -105,12 +107,12 @@ export async function GET() {
     const dynamicList = getDynamicProducts();
     const featured = dynamicList.filter((p) => p.featured);
     const personalized = (featured.length > 0 ? featured : dynamicList).slice(0, 3);
-    const trending = dynamicList.slice(2, 6);
+    const trending = dynamicList.slice(3, 9);
 
     return NextResponse.json(
       {
         personalized,
-        trending: trending.length > 0 ? trending : dynamicList,
+        trending: trending.length > 0 ? trending : dynamicList.slice(0, 6),
         topCategories: ["burger", "pizza", "pasta"],
       },
       { status: 200 }
@@ -121,8 +123,8 @@ export async function GET() {
     return NextResponse.json(
       {
         personalized: dynamicList.slice(0, 3),
-        trending: dynamicList.slice(3),
-        topCategories: ["burger", "pizza"],
+        trending: dynamicList.slice(3, 9),
+        topCategories: ["burger", "pizza", "pasta"],
       },
       { status: 200 }
     );

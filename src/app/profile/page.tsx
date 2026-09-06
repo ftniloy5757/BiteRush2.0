@@ -50,37 +50,40 @@ export default function ProfilePage() {
       } catch (err: any) {
         console.warn("Profile fetch failed, using fallback:", err);
         // Resilient fallback so page never breaks (Problem-04)
+        const isDemo = session?.user?.email?.toLowerCase() === "customer@biterush.com";
         if (session?.user) {
           setUser({
             id: session.user.id || "current-user",
             firstName: session.user.firstName || "Customer",
             lastName: session.user.lastName || "",
             email: session.user.email || "",
-            contactNumber: session.user.contactNumber || "+8801740734780",
-            bio: "Food enthusiast & BiteRush member",
+            contactNumber: session.user.contactNumber || (isDemo ? "+8801740734780" : ""),
+            bio: isDemo ? "Food enthusiast & BiteRush member" : "",
             profilePicture: session.user.profilePicture || null,
             themePreference: "light",
             status: "Online",
             isPhoneVerified: true,
             isEmailVerified: true,
-            savedAddresses: [
-              {
-                id: "addr-1",
-                label: "Home",
-                address: "Dhanmondi 19 House No. 226/A",
-                area: "Dhanmondi",
-                details: "Please give a call 10 minutes before reaching",
-                isDefault: true,
-              },
-              {
-                id: "addr-2",
-                label: "Office",
-                address: "House 15, Road 5, Block B",
-                area: "Gulshan",
-                details: "Leave at front desk reception",
-                isDefault: false,
-              },
-            ],
+            savedAddresses: isDemo
+              ? [
+                  {
+                    id: "addr-1",
+                    label: "Home",
+                    address: "Dhanmondi 19 House No. 226/A",
+                    area: "Dhanmondi",
+                    details: "Please give a call 10 minutes before reaching",
+                    isDefault: true,
+                  },
+                  {
+                    id: "addr-2",
+                    label: "Office",
+                    address: "House 15, Road 5, Block B",
+                    area: "Gulshan",
+                    details: "Leave at front desk reception",
+                    isDefault: false,
+                  },
+                ]
+              : [],
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
           });
@@ -128,18 +131,7 @@ export default function ProfilePage() {
     );
   }
 
-  const addresses = user?.savedAddresses && user.savedAddresses.length > 0
-    ? user.savedAddresses
-    : [
-        {
-          id: "addr-default-1",
-          label: "Home",
-          address: "Dhanmondi 19 House No. 226/A",
-          area: "Dhanmondi",
-          details: "Please give a call 10 minutes before reaching",
-          isDefault: true,
-        },
-      ];
+  const addresses = Array.isArray(user?.savedAddresses) ? user.savedAddresses : [];
 
   return (
     <div className="min-h-screen bg-orange-50/60 dark:bg-gray-950 py-12 px-4 transition-colors duration-200">
@@ -214,9 +206,16 @@ export default function ProfilePage() {
                 </span>
               </div>
 
-              {user?.bio && (
+              {user?.bio ? (
                 <p className="text-gray-600 dark:text-gray-300 text-sm border-l-4 border-orange-400 dark:border-orange-500 pl-3 italic">
                   &ldquo;{user.bio}&rdquo;
+                </p>
+              ) : (
+                <p className="text-gray-400 dark:text-gray-500 text-xs italic">
+                  No bio added yet.{" "}
+                  <Link href="/profile/edit" className="text-orange-600 dark:text-orange-400 hover:underline not-italic font-medium">
+                    Add a bio
+                  </Link>
                 </p>
               )}
             </div>
@@ -248,12 +247,28 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Contact Number</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {user?.contactNumber || "+8801740734780"}
-                  </p>
-                  <span className="text-[11px] font-medium text-green-600 dark:text-green-400">
-                    ✓ Active Contact
-                  </span>
+                  {user?.contactNumber ? (
+                    <>
+                      <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                        {user.contactNumber}
+                      </p>
+                      <span className="text-[11px] font-medium text-green-600 dark:text-green-400">
+                        ✓ Active Contact
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm font-medium text-gray-400 dark:text-gray-500 italic">
+                        Not provided yet
+                      </p>
+                      <Link
+                        href="/profile/edit"
+                        className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 hover:underline"
+                      >
+                        + Add phone number
+                      </Link>
+                    </>
+                  )}
                 </div>
               </div>
             </div>
@@ -279,43 +294,61 @@ export default function ProfilePage() {
               </Link>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {addresses.map((addr, idx) => (
-                <div
-                  key={addr.id || addr._id || idx}
-                  className="relative p-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-orange-300 dark:hover:border-orange-800 transition-all"
+            {addresses.length === 0 ? (
+              <div className="p-8 text-center bg-gray-50/70 dark:bg-gray-800/40 rounded-2xl border border-dashed border-gray-200 dark:border-gray-800 space-y-3">
+                <MapPin className="h-8 w-8 text-gray-400 dark:text-gray-500 mx-auto" />
+                <p className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  No saved delivery addresses yet
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
+                  Add your home or office delivery location to enable 1-click checkout on your BiteRush food orders.
+                </p>
+                <Link
+                  href="/profile/edit#addresses"
+                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-white bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 px-4 py-2 rounded-xl shadow-sm transition-all"
                 >
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">
-                      {addr.label.toLowerCase() === "work" || addr.label.toLowerCase() === "office" ? (
-                        <Briefcase className="h-3.5 w-3.5 text-blue-500" />
-                      ) : (
-                        <Home className="h-3.5 w-3.5 text-orange-500" />
-                      )}
-                      {addr.label}
-                    </span>
-                    {addr.isDefault && (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 px-2 py-0.5 rounded-md border border-green-200 dark:border-green-900">
-                        <CheckCircle className="h-3 w-3" /> Default
+                  <Plus className="h-3.5 w-3.5" /> Add Delivery Address
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {addresses.map((addr, idx) => (
+                  <div
+                    key={addr.id || addr._id || idx}
+                    className="relative p-4 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/40 hover:border-orange-300 dark:hover:border-orange-800 transition-all"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 shadow-sm border border-gray-200 dark:border-gray-700">
+                        {addr.label.toLowerCase() === "work" || addr.label.toLowerCase() === "office" ? (
+                          <Briefcase className="h-3.5 w-3.5 text-blue-500" />
+                        ) : (
+                          <Home className="h-3.5 w-3.5 text-orange-500" />
+                        )}
+                        {addr.label}
                       </span>
+                      {addr.isDefault && (
+                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/40 px-2 py-0.5 rounded-md border border-green-200 dark:border-green-900">
+                          <CheckCircle className="h-3 w-3" /> Default
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
+                      {addr.address}
+                    </p>
+                    {addr.area && (
+                      <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">
+                        Area: {addr.area}
+                      </p>
+                    )}
+                    {addr.details && (
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 bg-white dark:bg-gray-900/60 p-2 rounded-lg border border-gray-100 dark:border-gray-800 italic">
+                        &ldquo;{addr.details}&rdquo;
+                      </p>
                     )}
                   </div>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white leading-snug">
-                    {addr.address}
-                  </p>
-                  {addr.area && (
-                    <p className="text-xs text-orange-600 dark:text-orange-400 font-medium mt-0.5">
-                      Area: {addr.area}
-                    </p>
-                  )}
-                  {addr.details && (
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 bg-white dark:bg-gray-900/60 p-2 rounded-lg border border-gray-100 dark:border-gray-800 italic">
-                      &ldquo;{addr.details}&rdquo;
-                    </p>
-                  )}
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Account Details */}
