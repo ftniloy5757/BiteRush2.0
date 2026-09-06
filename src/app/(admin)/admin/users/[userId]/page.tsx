@@ -66,7 +66,10 @@ export default function EditUserPage() {
       lastName: "",
       email: "",
       password: "", // Optional for updates
-      role: "user" as const,
+      role: "customer" as "customer" | "restaurant" | "rider" | "admin",
+      restaurantName: "",
+      restaurantAddress: "",
+      vehicleType: "",
       bio: "",
       contactNumber: "",
       themePreference: "light" as const,
@@ -84,13 +87,16 @@ export default function EditUserPage() {
         lastName: user.lastName,
         email: user.email,
         password: "", // Don't populate password
-        role: user.role,
+        role: user.role || "customer",
+        restaurantName: user.restaurantName || "",
+        restaurantAddress: user.restaurantAddress || "",
+        vehicleType: user.vehicleType || "",
         bio: user.bio || "",
         contactNumber: user.contactNumber || "",
-        themePreference: user.themePreference,
-        status: user.status,
-        isEmailVerified: user.isEmailVerified,
-        isPhoneVerified: user.isPhoneVerified,
+        themePreference: user.themePreference || "light",
+        status: user.status || "Online",
+        isEmailVerified: !!user.isEmailVerified,
+        isPhoneVerified: !!user.isPhoneVerified,
       });
     }
   }, [user, form]);
@@ -193,7 +199,7 @@ export default function EditUserPage() {
               <Button onClick={() => mutate()} variant="outline">
                 Try Again
               </Button>
-              <Link href="/admin">
+              <Link href="/admin/users">
                 <Button variant="secondary">Back to Users</Button>
               </Link>
             </div>
@@ -208,10 +214,10 @@ export default function EditUserPage() {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2 mb-2">
-            <Link href="/admin">
+            <Link href="/admin/users">
               <Button variant="ghost" size="sm">
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Back
+                Back to Users
               </Button>
             </Link>
           </div>
@@ -345,7 +351,7 @@ export default function EditUserPage() {
                       <FormLabel>Role</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -373,7 +379,7 @@ export default function EditUserPage() {
                       <FormLabel>Theme Preference</FormLabel>
                       <Select
                         onValueChange={field.onChange}
-                        defaultValue={field.value}
+                        value={field.value}
                       >
                         <FormControl>
                           <SelectTrigger>
@@ -389,6 +395,71 @@ export default function EditUserPage() {
                     </FormItem>
                   )}
                 />
+
+                {/* Restaurant Specific Fields */}
+                {form.watch("role") === "restaurant" && (
+                  <div className="col-span-full grid grid-cols-1 md:grid-cols-2 gap-6 p-4 rounded-2xl bg-orange-50/60 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-900/40">
+                    <FormField
+                      control={form.control}
+                      name="restaurantName"
+                      render={({ field }: { field: any }) => (
+                        <FormItem>
+                          <FormLabel>Restaurant Name</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. Gourmet Burger Bistro" />
+                          </FormControl>
+                          <FormDescription>Commercial display name of the restaurant</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="restaurantAddress"
+                      render={({ field }: { field: any }) => (
+                        <FormItem>
+                          <FormLabel>Restaurant Street Address</FormLabel>
+                          <FormControl>
+                            <Input {...field} placeholder="e.g. House 14, Road 7, Dhanmondi, Dhaka" />
+                          </FormControl>
+                          <FormDescription>Kitchen location for order pickup by riders</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+
+                {/* Rider Specific Fields */}
+                {form.watch("role") === "rider" && (
+                  <div className="col-span-full p-4 rounded-2xl bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900/40">
+                    <FormField
+                      control={form.control}
+                      name="vehicleType"
+                      render={({ field }: { field: any }) => (
+                        <FormItem>
+                          <FormLabel>Vehicle Type</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || "Motorcycle"}>
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select vehicle type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Motorcycle">Motorcycle</SelectItem>
+                              <SelectItem value="Bicycle">Bicycle</SelectItem>
+                              <SelectItem value="Scooter">Scooter</SelectItem>
+                              <SelectItem value="Electric Bike">Electric Bike</SelectItem>
+                              <SelectItem value="Car">Car</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>Assigned transit method for route delivery</FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Bio */}
@@ -489,7 +560,7 @@ export default function EditUserPage() {
 
               {/* Action Buttons */}
               <div className="flex justify-end gap-4">
-                <Link href="/admin">
+                <Link href="/admin/users">
                   <Button type="button" variant="outline">
                     Cancel
                   </Button>

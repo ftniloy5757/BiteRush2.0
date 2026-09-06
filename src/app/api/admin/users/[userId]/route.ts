@@ -24,16 +24,21 @@ export async function GET(req: NextRequest, context: any) {
 
     await dbConnect();
 
-    // Validate userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    let user = null;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      user = await User.findById(userId).select(
+        "-passwordHash -phoneOtp -emailOtp -resetToken"
+      );
     }
 
-    const user = await User.findById(userId).select(
-      "-passwordHash -phoneOtp -emailOtp -resetToken"
-    );
-
     if (!user) {
+      try {
+        const { findDynamicUserById } = await import("@/lib/dynamicUsersStore");
+        const dyn = findDynamicUserById(userId);
+        if (dyn) {
+          return NextResponse.json(dyn);
+        }
+      } catch {}
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -155,6 +160,23 @@ export async function PATCH(req: NextRequest, context: any) {
     ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
 
     if (!updatedUser) {
+      // Check dynamic store fallback
+      try {
+        const { updateDynamicUser, findDynamicUserById } = await import("@/lib/dynamicUsersStore");
+        const dyn = updateDynamicUser(userId, {
+          ...(body.firstName ? { firstName: body.firstName } : {}),
+          ...(body.lastName ? { lastName: body.lastName } : {}),
+          ...(body.email ? { email: body.email.toLowerCase().trim() } : {}),
+          ...(body.contactNumber ? { contactNumber: body.contactNumber } : {}),
+          ...(body.role ? { role: body.role } : {}),
+          ...(body.restaurantName ? { restaurantName: body.restaurantName } : {}),
+          ...(body.restaurantAddress ? { restaurantAddress: body.restaurantAddress } : {}),
+          ...(body.vehicleType ? { vehicleType: body.vehicleType } : {}),
+        });
+        if (dyn) {
+          return NextResponse.json(dyn);
+        }
+      } catch {}
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
@@ -181,6 +203,9 @@ export async function PATCH(req: NextRequest, context: any) {
       if (updatedUser.vehicleTypeEncrypted) {
         userObj.vehicleType = CryptoService.decryptProfile(updatedUser.vehicleTypeEncrypted);
       }
+      // Mirror to dynamic store
+      const { updateDynamicUser } = await import("@/lib/dynamicUsersStore");
+      updateDynamicUser(userId, userObj);
     } catch {}
 
     return NextResponse.json(userObj);
@@ -200,14 +225,22 @@ export async function DELETE(req: NextRequest, context: any) {
 
     await dbConnect();
 
-    // Validate userId
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      return NextResponse.json({ error: "Invalid user ID" }, { status: 400 });
+    let deletedFromDb = false;
+    if (mongoose.Types.ObjectId.isValid(userId)) {
+      const deletedUser = await User.findByIdAndDelete(userId);
+      if (deletedUser) {
+        deletedFromDb = true;
+      }
     }
 
-    const deletedUser = await User.findByIdAndDelete(userId);
+    // Also mirror delete in dynamic store
+    let deletedFromDynamic = false;
+    try {
+      const { deleteDynamicUser } = await import("@/lib/dynamicUsersStore");
+      deletedFromDynamic = deleteDynamicUser(userId);
+    } catch {}
 
-    if (!deletedUser) {
+    if (!deletedFromDb && !deletedFromDynamic) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 

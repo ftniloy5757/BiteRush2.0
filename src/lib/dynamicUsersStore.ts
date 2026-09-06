@@ -127,3 +127,14 @@ export const updateDynamicUser = (id: string, updates: Partial<StoredUser>): Sto
   }
   return null;
 };
+
+export const deleteDynamicUser = (id: string): boolean => {
+  const users = getDynamicUsers();
+  const idx = users.findIndex((u) => u._id === id || u.id === id);
+  if (idx >= 0) {
+    users.splice(idx, 1);
+    return true;
+  }
+  return false;
+};
+

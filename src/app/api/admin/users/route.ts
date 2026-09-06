@@ -74,6 +74,15 @@ export async function GET(req: NextRequest) {
       if (obj.contactNumberEncrypted) {
         obj.contactNumber = CryptoService.decryptProfile(obj.contactNumberEncrypted);
       }
+      if (obj.restaurantNameEncrypted) {
+        obj.restaurantName = CryptoService.decryptProfile(obj.restaurantNameEncrypted);
+      }
+      if (obj.restaurantAddressEncrypted) {
+        obj.restaurantAddress = CryptoService.decryptProfile(obj.restaurantAddressEncrypted);
+      }
+      if (obj.vehicleTypeEncrypted) {
+        obj.vehicleType = CryptoService.decryptProfile(obj.vehicleTypeEncrypted);
+      }
       return obj;
     });
 
@@ -149,6 +158,15 @@ export async function POST(req: NextRequest) {
     const contactNumberEncrypted = contactNumber
       ? CryptoService.encryptProfile(contactNumber)
       : undefined;
+    const restaurantNameEncrypted = body.restaurantName
+      ? CryptoService.encryptProfile(body.restaurantName)
+      : undefined;
+    const restaurantAddressEncrypted = body.restaurantAddress
+      ? CryptoService.encryptProfile(body.restaurantAddress)
+      : undefined;
+    const vehicleTypeEncrypted = body.vehicleType
+      ? CryptoService.encryptProfile(body.vehicleType)
+      : undefined;
 
     // Generate integrity MAC
     const integrityMac = CryptoService.generateIntegrityMac({
@@ -164,10 +182,16 @@ export async function POST(req: NextRequest) {
       lastName: "[ENCRYPTED]",
       email: "[ENCRYPTED]",
       contactNumber: contactNumber ? "[ENCRYPTED]" : undefined,
+      restaurantName: body.restaurantName ? "[ENCRYPTED]" : undefined,
+      restaurantAddress: body.restaurantAddress ? "[ENCRYPTED]" : undefined,
+      vehicleType: body.vehicleType ? "[ENCRYPTED]" : undefined,
       firstNameEncrypted,
       lastNameEncrypted,
       emailEncrypted,
       contactNumberEncrypted,
+      restaurantNameEncrypted,
+      restaurantAddressEncrypted,
+      vehicleTypeEncrypted,
       emailLookupHmac,
       contactNumberLookupHmac,
       integrityMac,
@@ -177,6 +201,26 @@ export async function POST(req: NextRequest) {
     });
 
     await newUser.save();
+
+    // Mirror to dynamic store
+    try {
+      const { addDynamicUser } = await import("@/lib/dynamicUsersStore");
+      addDynamicUser({
+        _id: newUser._id.toString(),
+        id: newUser._id.toString(),
+        firstName,
+        lastName,
+        email: normEmail,
+        contactNumber,
+        role: role || "customer",
+        passwordHash,
+        restaurantName: body.restaurantName,
+        restaurantAddress: body.restaurantAddress,
+        vehicleType: body.vehicleType,
+        isEmailVerified: true,
+        isTwoFactorEnabled: true,
+      });
+    } catch {}
 
     // Return user data with decrypted fields for display
     const userData = newUser.toObject();
@@ -188,6 +232,9 @@ export async function POST(req: NextRequest) {
     userData.lastName = lastName;
     userData.email = normEmail;
     userData.contactNumber = contactNumber;
+    userData.restaurantName = body.restaurantName;
+    userData.restaurantAddress = body.restaurantAddress;
+    userData.vehicleType = body.vehicleType;
 
     return NextResponse.json(userData, { status: 201 });
   } catch (error: any) {
