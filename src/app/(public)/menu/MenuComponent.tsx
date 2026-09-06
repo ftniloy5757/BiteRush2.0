@@ -11,6 +11,7 @@ import { INITIAL_PRODUCTS, ProductItem } from "@/lib/initialProducts";
 type Product = ProductItem;
 
 import DishImage from "@/components/customUi/DishImage";
+import { toast } from "react-hot-toast";
 
 function MenuList() {
   const { data: session } = useSession();
@@ -123,12 +124,24 @@ function MenuList() {
     applyFilters(allProducts, filters, q);
   };
 
-  const addToCart = (product: Product) => {
-    if (!session) {
-      router.push("/sign-in?redirect=/menu");
-      return;
-    }
+  const [cartCount, setCartCount] = useState(0);
 
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        const count = cart.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0);
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    };
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
+    return () => window.removeEventListener("storage", updateCartCount);
+  }, []);
+
+  const addToCart = (product: Product) => {
     const cart = JSON.parse(localStorage.getItem("cart") || "[]");
     const existingIndex = cart.findIndex((item: any) => item._id === product._id);
 
@@ -142,8 +155,11 @@ function MenuList() {
     }
 
     localStorage.setItem("cart", JSON.stringify(cart));
+    const count = cart.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0);
+    setCartCount(count);
     setAddedItem(product._id);
     setTimeout(() => setAddedItem(null), 1800);
+    toast.success(`Added ${product.name} to cart! 🛒`);
   };
 
   return (
@@ -297,15 +313,15 @@ function MenuList() {
         </div>
       )}
 
-      {/* Floating View Cart Button (Only for Authenticated Customers) */}
-      {session && session.user?.role === "customer" && (
+      {/* Floating View Cart Button (Visible for both normal & incognito users whenever cart has items) */}
+      {cartCount > 0 && (
         <div className="fixed bottom-6 right-6 z-40">
           <Link
             href="/cart"
-            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-full shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95"
+            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 px-6 rounded-full shadow-2xl flex items-center gap-2.5 transition-all hover:scale-105 active:scale-95 text-sm"
           >
             <ShoppingBag className="h-5 w-5" />
-            <span>View Cart</span>
+            <span>View Cart ({cartCount})</span>
           </Link>
         </div>
       )}

@@ -85,6 +85,7 @@ export default function PaymentPage() {
     const orderData = {
       orderItems: cartItems.map((item) => ({
         _id: item._id,
+        product: item._id,
         name: item.name,
         quantity: item.quantity,
         price: item.price,
@@ -101,9 +102,13 @@ export default function PaymentPage() {
       deliveryInstructions,
       deliveryMethod,
       paymentMethod,
-      tip,
+      itemsPrice: subtotal,
       subtotal,
       shippingPrice: deliveryFee,
+      deliveryFee,
+      tipAmount: tip,
+      tip,
+      totalPrice: total,
       total,
       couponCode: couponApplied ? couponCode : undefined,
     };

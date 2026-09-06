@@ -52,7 +52,7 @@ const postSchema = new Schema<IPost>(
     cryptoVersion: { type: Number, default: 1 },
     integrityMac: { type: String, required: true },
   },
-  { timestamps: true }
+  { timestamps: true, bufferCommands: false }
 );
 
 const Post = mongoose.models.Post || mongoose.model<IPost>("Post", postSchema);

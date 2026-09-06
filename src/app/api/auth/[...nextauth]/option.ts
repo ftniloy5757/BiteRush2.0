@@ -30,13 +30,18 @@ export const authOptions: NextAuthOptions = {
           }
 
           const rawIdentifier = credentials.identifier.trim();
+
+          // Reject non-email logins: phone number login is strictly prohibited
+          if (!rawIdentifier.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawIdentifier)) {
+            return null;
+          }
+
           const normalizedEmail = rawIdentifier.toLowerCase();
           const rawPassword = credentials.password;
           const inputOtp = credentials.otp.trim();
 
           // Compute deterministic HMAC lookup tokens
           const emailLookupHmac = CryptoService.createEmailLookupHmac(normalizedEmail);
-          const phoneLookupHmac = CryptoService.createPhoneLookupHmac(rawIdentifier);
 
           // 1. Try Authenticating against MongoDB database
           try {
@@ -45,9 +50,7 @@ export const authOptions: NextAuthOptions = {
               let user = await User.findOne({
                 $or: [
                   { emailLookupHmac },
-                  { contactNumberLookupHmac: phoneLookupHmac },
                   { email: normalizedEmail },
-                  { contactNumber: rawIdentifier },
                 ],
               });
 
@@ -59,9 +62,7 @@ export const authOptions: NextAuthOptions = {
                   user = await User.findOne({
                     $or: [
                       { emailLookupHmac },
-                      { contactNumberLookupHmac: phoneLookupHmac },
                       { email: normalizedEmail },
-                      { contactNumber: rawIdentifier },
                     ],
                   });
                 } catch {
@@ -76,7 +77,7 @@ export const authOptions: NextAuthOptions = {
                 );
 
                 if (isPasswordCorrect) {
-                  // Step 2: Verify Two-Factor Authentication OTP
+                  // Step 2: Verify Two-Factor Authentication OTP (accepts real OTP or 123456 demo code)
                   const isOtpValid = CryptoService.verifyOTP(
                     inputOtp,
                     user.twoFactorOtp,
@@ -131,55 +132,70 @@ export const authOptions: NextAuthOptions = {
             console.warn("DB authentication attempt failed, falling back to demo profiles:", dbErr);
           }
 
-          // 2. Fallback Authentication for Pre-Configured Demo Test Accounts
-          const matchedDemoUser = DEMO_USERS_FALLBACK.find(
-            (u) =>
-              (u.email.toLowerCase() === normalizedEmail || u.contactNumber === rawIdentifier) &&
-              u.password === rawPassword
-          );
+          // 2. Fallback Authentication strictly for Dedicated Demo Test Accounts
+          const DEDICATED_TESTING_EMAILS = [
+            "customer@biterush.com",
+            "restaurant@biterush.com",
+            "rider@biterush.com",
+            "admin@biterush.com",
+          ];
 
-          if (matchedDemoUser) {
-            // For demo users, verify OTP from DB if available, otherwise accept any valid 6-digit code
-            try {
-              const conn = await connectDB();
-              if (conn) {
-                const demoDbUser = await User.findOne({
-                  $or: [
-                    { emailLookupHmac },
-                    { email: matchedDemoUser.email },
-                  ],
-                });
-                if (demoDbUser && demoDbUser.twoFactorOtp) {
-                  const isOtpValid = CryptoService.verifyOTP(
-                    inputOtp,
-                    demoDbUser.twoFactorOtp,
-                    demoDbUser.twoFactorOtpExpiresAt
-                  );
-                  if (!isOtpValid) {
-                    return null;
+          if (DEDICATED_TESTING_EMAILS.includes(normalizedEmail)) {
+            const matchedDemoUser = DEMO_USERS_FALLBACK.find(
+              (u) =>
+                u.email.toLowerCase() === normalizedEmail &&
+                u.password === rawPassword
+            );
+
+            if (matchedDemoUser) {
+              // Demo code is strictly 123456 or DB-generated OTP
+              let isOtpValid = inputOtp === "123456";
+
+              if (!isOtpValid) {
+                try {
+                  const conn = await connectDB();
+                  if (conn) {
+                    const demoDbUser = await User.findOne({
+                      $or: [
+                        { emailLookupHmac },
+                        { email: matchedDemoUser.email },
+                      ],
+                    });
+                    if (demoDbUser && demoDbUser.twoFactorOtp) {
+                      isOtpValid = CryptoService.verifyOTP(
+                        inputOtp,
+                        demoDbUser.twoFactorOtp,
+                        demoDbUser.twoFactorOtpExpiresAt
+                      );
+                      if (isOtpValid) {
+                        demoDbUser.twoFactorOtp = undefined;
+                        demoDbUser.twoFactorOtpExpiresAt = undefined;
+                        demoDbUser.isTwoFactorVerified = true;
+                        await demoDbUser.save();
+                      }
+                    }
                   }
-                  // Clear OTP
-                  demoDbUser.twoFactorOtp = undefined;
-                  demoDbUser.twoFactorOtpExpiresAt = undefined;
-                  demoDbUser.isTwoFactorVerified = true;
-                  await demoDbUser.save();
+                } catch {
+                  // Fallback
                 }
               }
-            } catch {
-              // Accept login for demo users even without DB OTP verification
-            }
 
-            return {
-              id: matchedDemoUser.id,
-              firstName: matchedDemoUser.firstName,
-              lastName: matchedDemoUser.lastName,
-              contactNumber: matchedDemoUser.contactNumber,
-              email: matchedDemoUser.email,
-              isEmailVerified: true,
-              role: matchedDemoUser.role,
-              restaurantName: matchedDemoUser.restaurantName,
-              vehicleType: matchedDemoUser.vehicleType,
-            };
+              if (!isOtpValid) {
+                return null;
+              }
+
+              return {
+                id: matchedDemoUser.id,
+                firstName: matchedDemoUser.firstName,
+                lastName: matchedDemoUser.lastName,
+                contactNumber: matchedDemoUser.contactNumber,
+                email: matchedDemoUser.email,
+                isEmailVerified: true,
+                role: matchedDemoUser.role,
+                restaurantName: matchedDemoUser.restaurantName,
+                vehicleType: matchedDemoUser.vehicleType,
+              };
+            }
           }
 
           return null;

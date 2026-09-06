@@ -31,22 +31,29 @@ export async function POST(req: NextRequest) {
 
     if (!identifier || !password) {
       return NextResponse.json(
-        { success: false, message: "Email/phone and password are required." },
+        { success: false, message: "Email and password are required." },
         { status: 400 }
       );
     }
 
     const rawIdentifier = identifier.trim();
+
+    // Enforce email-only login: reject phone numbers
+    if (!rawIdentifier.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawIdentifier)) {
+      return NextResponse.json(
+        { success: false, message: "Please enter a valid email address. Phone number login is not allowed." },
+        { status: 400 }
+      );
+    }
+
     const normalizedEmail = rawIdentifier.toLowerCase();
 
     // Compute deterministic HMAC lookup tokens
     const emailLookupHmac = CryptoService.createEmailLookupHmac(normalizedEmail);
-    const phoneLookupHmac = CryptoService.createPhoneLookupHmac(rawIdentifier);
 
     // 1. Try MongoDB lookup
     let userId: string | null = null;
     let maskedEmail = "";
-    let debugOtp: string | undefined;
 
     try {
       const conn = await connectDB();
@@ -54,9 +61,7 @@ export async function POST(req: NextRequest) {
         let user = await User.findOne({
           $or: [
             { emailLookupHmac },
-            { contactNumberLookupHmac: phoneLookupHmac },
             { email: normalizedEmail },
-            { contactNumber: rawIdentifier },
           ],
         });
 
@@ -68,9 +73,7 @@ export async function POST(req: NextRequest) {
             user = await User.findOne({
               $or: [
                 { emailLookupHmac },
-                { contactNumberLookupHmac: phoneLookupHmac },
                 { email: normalizedEmail },
-                { contactNumber: rawIdentifier },
               ],
             });
           } catch {
@@ -103,7 +106,7 @@ export async function POST(req: NextRequest) {
               maskedEmail = "***@***.com";
             }
 
-            // Send OTP via email if configured
+            // Send OTP via email to the customer
             try {
               if (process.env.EMAIL_NAME && process.env.EMAIL_PASS && decryptedEmail && decryptedEmail !== "[ENCRYPTED]") {
                 await transporter.sendMail({
@@ -112,14 +115,11 @@ export async function POST(req: NextRequest) {
                   subject: "BiteRush Login Verification Code (2FA)",
                   text: `Your BiteRush two-factor authentication code is: ${otp}\n\nThis code is valid for 10 minutes. Do not share this code with anyone.`,
                 });
+              } else {
+                console.log(`[Email Notice] 2FA OTP for ${decryptedEmail}: ${otp}`);
               }
             } catch (emailErr) {
               console.warn("Failed to send 2FA email:", emailErr);
-            }
-
-            // Include OTP in response for dev/testing environments
-            if (process.env.NODE_ENV !== "production") {
-              debugOtp = otp;
             }
 
             return NextResponse.json({
@@ -128,7 +128,6 @@ export async function POST(req: NextRequest) {
               userId,
               maskedEmail,
               message: "Credentials verified. A 6-digit verification code has been sent to your email.",
-              ...(debugOtp ? { debugOtp } : {}),
             });
           }
         }
@@ -137,50 +136,71 @@ export async function POST(req: NextRequest) {
       console.warn("DB authentication challenge failed:", dbErr);
     }
 
-    // 2. Fallback: Check demo users
-    const matchedDemoUser = DEMO_USERS.find(
-      (u) =>
-        (u.email.toLowerCase() === normalizedEmail || u.contactNumber === rawIdentifier) &&
-        u.password === password
-    );
+    // 2. Fallback: Check dedicated demo users only (strictly the 4 testing emails)
+    const DEDICATED_TESTING_EMAILS = [
+      "customer@biterush.com",
+      "restaurant@biterush.com",
+      "rider@biterush.com",
+      "admin@biterush.com",
+    ];
 
-    if (matchedDemoUser) {
-      // For demo users, generate OTP and return it directly for testing
-      const { otp } = CryptoService.generateOTP();
-      const [local, domain] = matchedDemoUser.email.split("@");
-      maskedEmail = `${local.slice(0, 2)}***@${domain}`;
+    if (DEDICATED_TESTING_EMAILS.includes(normalizedEmail)) {
+      const matchedDemoUser = DEMO_USERS.find(
+        (u) => u.email.toLowerCase() === normalizedEmail && u.password === password
+      );
 
-      // Try to store OTP on the demo user in DB if possible
-      try {
-        const conn = await connectDB();
-        if (conn) {
-          await User.findOneAndUpdate(
-            {
-              $or: [
-                { emailLookupHmac },
-                { email: matchedDemoUser.email },
-              ],
-            },
-            { twoFactorOtp: otp, twoFactorOtpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }
-          );
+      if (matchedDemoUser) {
+        const { otp } = CryptoService.generateOTP();
+        const [local, domain] = matchedDemoUser.email.split("@");
+        maskedEmail = `${local.slice(0, 2)}***@${domain}`;
+
+        // Attempt sending realtime OTP to demo user email
+        try {
+          if (process.env.EMAIL_NAME && process.env.EMAIL_PASS) {
+            await transporter.sendMail({
+              from: process.env.EMAIL_NAME,
+              to: matchedDemoUser.email,
+              subject: "BiteRush Login Verification Code (2FA)",
+              text: `Your BiteRush two-factor authentication code is: ${otp}\n\nDemo test code: 123456\nThis code is valid for 10 minutes.`,
+            });
+          } else {
+            console.log(`[Demo Notice] 2FA OTP for ${matchedDemoUser.email}: ${otp} (Demo code: 123456)`);
+          }
+        } catch (emailErr) {
+          console.warn("Failed to send demo 2FA email:", emailErr);
         }
-      } catch {
-        // Continue even if DB update fails
-      }
 
-      return NextResponse.json({
-        success: true,
-        requires2FA: true,
-        userId: matchedDemoUser.id,
-        maskedEmail,
-        message: "Credentials verified. Enter the verification code to complete login.",
-        debugOtp: otp,
-      });
+        // Try to store OTP on the demo user in DB if possible
+        try {
+          const conn = await connectDB();
+          if (conn) {
+            await User.findOneAndUpdate(
+              {
+                $or: [
+                  { emailLookupHmac },
+                  { email: matchedDemoUser.email },
+                ],
+              },
+              { twoFactorOtp: otp, twoFactorOtpExpiresAt: new Date(Date.now() + 10 * 60 * 1000) }
+            );
+          }
+        } catch {
+          // Continue even if DB update fails
+        }
+
+        return NextResponse.json({
+          success: true,
+          requires2FA: true,
+          userId: matchedDemoUser.id,
+          maskedEmail,
+          message: "Credentials verified. A verification code has been sent to your email.",
+        });
+      }
     }
 
     // Invalid credentials
     return NextResponse.json(
-      { success: false, message: "Invalid email/phone or password." },
+      { success: false, message: "Invalid email or password." },
       { status: 401 }
     );
   } catch (error: any) {

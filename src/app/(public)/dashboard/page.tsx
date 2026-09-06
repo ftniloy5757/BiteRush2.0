@@ -19,6 +19,7 @@ import {
   CheckCircle,
 } from "lucide-react";
 import Chatbot from "@/components/Chatbot";
+import { toast } from "react-hot-toast";
 
 interface Product {
   _id: string;
@@ -52,6 +53,22 @@ export default function DashboardGreeting() {
   }>({ personalized: [], trending: [], topCategories: [] });
   const [activeOrders, setActiveOrders] = useState<ActiveOrder[]>([]);
   const [loadingData, setLoadingData] = useState(true);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        const count = cart.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0);
+        setCartCount(count);
+      } catch {
+        setCartCount(0);
+      }
+    };
+    updateCartCount();
+    window.addEventListener("storage", updateCartCount);
+    return () => window.removeEventListener("storage", updateCartCount);
+  }, []);
 
   useEffect(() => {
     async function fetchData() {
@@ -92,7 +109,9 @@ export default function DashboardGreeting() {
       cart.push({ ...product, quantity: 1 });
     }
     localStorage.setItem("cart", JSON.stringify(cart));
-    alert(`Added ${product.name} to cart! 🛒`);
+    const count = cart.reduce((sum: number, item: any) => sum + (Number(item.quantity) || 1), 0);
+    setCartCount(count);
+    toast.success(`Added ${product.name} to cart! 🛒`);
   };
 
   if (status === "loading") {
@@ -380,13 +399,23 @@ export default function DashboardGreeting() {
         </div>
       )}
 
-      {/* AI Assistant Chatbot Toggle */}
-      <div className="flex justify-end pt-4">
+      {/* Floating Action Controls: Cart + AI Assistant side-by-side (Problem-09) */}
+      <div className="fixed bottom-6 right-6 z-40 flex items-center gap-3">
+        {cartCount > 0 && (
+          <Link
+            href="/cart"
+            className="bg-gradient-to-r from-orange-500 to-amber-600 hover:from-orange-600 hover:to-amber-700 text-white font-bold py-3.5 px-5 rounded-full shadow-2xl flex items-center gap-2 transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm"
+          >
+            <ShoppingBag className="h-4 w-4 sm:h-5 sm:w-5" />
+            <span>Cart ({cartCount})</span>
+          </Link>
+        )}
+
         <button
           onClick={() => setChatbotVisible(!chatbotVisible)}
-          className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-bold text-xs px-5 py-3 rounded-2xl shadow-lg hover:from-blue-600 hover:to-indigo-700 transition-all flex items-center gap-2"
+          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-xs py-3.5 px-4 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 flex items-center gap-2"
         >
-          <span>🤖 {chatbotVisible ? "Close AI Food Assistant" : "Ask AI Food Assistant"}</span>
+          <span>🤖 {chatbotVisible ? "Close AI" : "AI Assistant"}</span>
         </button>
       </div>
 

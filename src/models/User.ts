@@ -1,6 +1,16 @@
 // src/models/User.ts
 import mongoose, { Schema, Document } from "mongoose";
 
+export interface SavedAddress {
+  _id?: string;
+  id?: string;
+  label: string;
+  address: string;
+  area: string;
+  details?: string;
+  isDefault?: boolean;
+}
+
 export interface IUser extends Document {
   // Plaintext/Decrypted view fields
   firstName: string;
@@ -11,6 +21,7 @@ export interface IUser extends Document {
   restaurantName?: string;
   restaurantAddress?: string;
   vehicleType?: string;
+  savedAddresses?: SavedAddress[];
 
   // Asymmetric Encrypted PII Fields (RSA)
   firstNameEncrypted?: string;
@@ -115,6 +126,18 @@ const userSchema = new Schema<IUser>(
     // Rider-specific fields
     vehicleType: String,
     activeStatus: { type: Boolean, default: true },
+
+    // Saved delivery addresses
+    savedAddresses: [
+      {
+        id: String,
+        label: { type: String, default: "Home" },
+        address: { type: String, required: true },
+        area: { type: String, required: true },
+        details: { type: String },
+        isDefault: { type: Boolean, default: false },
+      },
+    ],
 
     // Cryptographic metadata
     cryptoVersion: { type: Number, default: 1 },

@@ -32,7 +32,16 @@ export const POST = async (request: Request) => {
   const { otp: emailOtp, expiresAt: emailOtpExpiresAt } = CryptoService.generateOTP();
 
   try {
-    await connectDB();
+    const conn = await connectDB();
+    if (!conn) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          message: "Database service is temporarily unavailable. Please try again in a few moments.",
+        }),
+        { status: 503 }
+      );
+    }
 
     // Check if user already exists via blind HMAC index
     const existingUser = await User.findOne({

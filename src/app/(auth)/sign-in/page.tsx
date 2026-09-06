@@ -18,7 +18,6 @@ function SignInForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState<"CREDENTIALS" | "OTP_CHALLENGE">("CREDENTIALS");
   const [maskedEmail, setMaskedEmail] = useState("");
-  const [debugOtp, setDebugOtp] = useState("");
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -44,6 +43,12 @@ function SignInForm() {
     setIsSubmitting(true);
     setError("");
 
+    if (!identifier.includes("@") || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier.trim())) {
+      setError("Please enter a valid email address. Phone number login is not supported.");
+      setIsSubmitting(false);
+      return;
+    }
+
     try {
       const res = await fetch("/api/auth/login-challenge", {
         method: "POST",
@@ -59,9 +64,6 @@ function SignInForm() {
       if (data.success && data.requires2FA) {
         setStep("OTP_CHALLENGE");
         setMaskedEmail(data.maskedEmail || "");
-        if (data.debugOtp) {
-          setDebugOtp(data.debugOtp);
-        }
         setIsSubmitting(false);
       } else {
         setError(data.message || "Invalid email or password. Please verify your credentials and try again.");
@@ -149,14 +151,6 @@ function SignInForm() {
             </Alert>
           )}
 
-          {/* Debug OTP hint for demo/testing */}
-          {step === "OTP_CHALLENGE" && debugOtp && (
-            <div className="mb-4 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-4 py-2.5 rounded-2xl text-xs border border-amber-200 dark:border-amber-800">
-              <span className="font-bold">Demo Mode:</span> Your 2FA code is{" "}
-              <code className="bg-amber-100 dark:bg-amber-900 px-1.5 py-0.5 rounded font-mono font-bold">{debugOtp}</code>
-            </div>
-          )}
-
           {/* Step 1: Credentials Form */}
           {step === "CREDENTIALS" && (
             <form onSubmit={handleCredentialsSubmit} className="space-y-4">
@@ -165,7 +159,7 @@ function SignInForm() {
                   htmlFor="identifier"
                   className="block text-xs font-bold text-gray-700 dark:text-gray-300 mb-1.5"
                 >
-                  Email or Contact Number
+                  Email Address
                 </label>
                 <div className="relative rounded-2xl">
                   <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none">
@@ -174,10 +168,10 @@ function SignInForm() {
                   <Input
                     id="identifier"
                     name="identifier"
-                    type="text"
+                    type="email"
                     required
                     className="pl-10 pr-4 py-2.5 h-11 text-xs rounded-2xl border-gray-200 dark:border-gray-800 dark:bg-gray-800/50 focus:border-orange-500 focus:ring-orange-500"
-                    placeholder="name@example.com or phone"
+                    placeholder="name@example.com"
                     value={identifier}
                     onChange={(e) => setIdentifier(e.target.value)}
                   />
@@ -303,7 +297,6 @@ function SignInForm() {
                   setStep("CREDENTIALS");
                   setOtp("");
                   setError("");
-                  setDebugOtp("");
                 }}
                 className="w-full text-xs text-gray-500 dark:text-gray-400 hover:text-orange-600 dark:hover:text-orange-400 transition-colors font-semibold mt-1"
               >

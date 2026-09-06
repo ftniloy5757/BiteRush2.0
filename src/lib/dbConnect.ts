@@ -22,9 +22,11 @@ export const connectDB = async () => {
   const uri = process.env.MONGODB_URI || MONGODB_URI;
 
   // Ignore missing or unconfigured placeholder strings
-  if (!uri || uri.includes("<username>") || uri.includes("<password>") || uri.includes("cluster0.mongodb.net")) {
+  if (!uri || uri.includes("<username>") || uri.includes("<password>")) {
     return null;
   }
+
+  mongoose.set("bufferCommands", false);
 
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
@@ -34,7 +36,7 @@ export const connectDB = async () => {
     cached.promise = mongoose
       .connect(uri, {
         bufferCommands: false,
-        serverSelectionTimeoutMS: 4000,
+        serverSelectionTimeoutMS: 3000,
       })
       .then((mongooseInstance) => {
         return mongooseInstance;

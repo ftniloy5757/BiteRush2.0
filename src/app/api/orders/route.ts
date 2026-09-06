@@ -122,6 +122,43 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ message: "No order items" }, { status: 400 });
     }
 
+    const calculatedItemsPrice =
+      typeof itemsPrice === "number" && itemsPrice > 0
+        ? itemsPrice
+        : typeof body.subtotal === "number" && body.subtotal > 0
+        ? body.subtotal
+        : orderItems.reduce(
+            (acc: number, item: any) =>
+              acc + (Number(item.price) || 0) * (Number(item.quantity) || 1),
+            0
+          );
+
+    const calculatedShippingPrice =
+      typeof shippingPrice === "number"
+        ? shippingPrice
+        : typeof body.deliveryFee === "number"
+        ? body.deliveryFee
+        : 45;
+
+    const calculatedTipAmount =
+      typeof tipAmount === "number"
+        ? tipAmount
+        : typeof body.tip === "number"
+        ? body.tip
+        : 0;
+
+    const calculatedTotalPrice =
+      typeof totalPrice === "number" && totalPrice > 0
+        ? totalPrice
+        : typeof body.total === "number" && body.total > 0
+        ? body.total
+        : calculatedItemsPrice + calculatedShippingPrice + calculatedTipAmount;
+
+    const normalizedOrderItems = orderItems.map((item: any) => ({
+      ...item,
+      product: item.product || item._id || item.id,
+    }));
+
     // 1. Asymmetric ECC Encryption of sensitive delivery data
     const shippingAddressJson = JSON.stringify(shippingAddress);
     const shippingAddressEncrypted = CryptoService.encryptOrderField(shippingAddressJson);
@@ -132,8 +169,8 @@ export async function POST(req: NextRequest) {
     // 2. Data Integrity MAC
     const integrityMac = CryptoService.generateIntegrityMac({
       userId: session.user.id,
-      totalPrice,
-      itemsPrice,
+      totalPrice: calculatedTotalPrice,
+      itemsPrice: calculatedItemsPrice,
       paymentMethod,
     });
 
@@ -145,15 +182,15 @@ export async function POST(req: NextRequest) {
         email: session.user.email || "customer@biterush.com",
         contactNumber: session.user.contactNumber || "+8801700000001",
       },
-      orderItems,
+      orderItems: normalizedOrderItems,
       shippingAddress,
       paymentMethod,
       deliveryMethod,
       deliveryInstructions,
-      itemsPrice,
-      shippingPrice,
-      tipAmount: tipAmount || 0,
-      totalPrice,
+      itemsPrice: calculatedItemsPrice,
+      shippingPrice: calculatedShippingPrice,
+      tipAmount: calculatedTipAmount,
+      totalPrice: calculatedTotalPrice,
       status: "pending",
     });
 
@@ -162,7 +199,7 @@ export async function POST(req: NextRequest) {
       try {
         const order = new Order({
           user: session.user.id,
-          orderItems,
+          orderItems: normalizedOrderItems,
           // Masked plaintext — actual data lives in shippingAddressEncrypted (ECC)
           shippingAddress: {
             address: "[ENCRYPTED]",
@@ -175,10 +212,10 @@ export async function POST(req: NextRequest) {
           deliveryMethod,
           deliveryInstructions: deliveryInstructions ? "[ENCRYPTED]" : undefined,
           deliveryInstructionsEncrypted,
-          itemsPrice,
-          shippingPrice,
-          tipAmount: tipAmount || 0,
-          totalPrice,
+          itemsPrice: calculatedItemsPrice,
+          shippingPrice: calculatedShippingPrice,
+          tipAmount: calculatedTipAmount,
+          totalPrice: calculatedTotalPrice,
           status: "pending",
           isPaid: paymentMethod === "Bkash" || paymentMethod === "Card or Debit Card",
           paidAt:

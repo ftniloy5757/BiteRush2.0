@@ -58,7 +58,7 @@ export default function Chatbot() {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 w-80 md:w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300">
+    <div className="fixed bottom-20 right-6 z-50 w-80 md:w-96 bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300">
       {/* Header */}
       <div className="bg-gradient-to-r from-orange-500 to-amber-600 p-4 text-white flex items-center justify-between">
         <div className="flex items-center gap-2">

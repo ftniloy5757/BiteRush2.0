@@ -147,13 +147,23 @@ export default function OrderDetailsPage({
         throw new Error("Failed to fetch order details");
       }
       const data = await response.json();
-      setOrder(data.order);
-      if (data.order.messages) {
-        setChatMessages(data.order.messages);
+      if (data.order) {
+        setOrder(data.order);
+        if (data.order.messages) {
+          setChatMessages(data.order.messages);
+        }
       }
-      setIsLoading(false);
+      setError(null);
     } catch (err: any) {
-      setError(err.message || "An error occurred");
+      console.warn("Polling order error:", err);
+      // Only set error screen if order has not been loaded yet
+      setOrder((prev) => {
+        if (!prev) {
+          setError(err.message || "Failed to fetch order details");
+        }
+        return prev;
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -161,16 +171,24 @@ export default function OrderDetailsPage({
   const handleCancelOrder = async () => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
     try {
+      // Optimistically update order status to cancelled immediately (Problem-07)
+      setOrder((prev) => (prev ? { ...prev, status: "cancelled" } : null));
+
       const res = await fetch(`/api/orders/${id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "cancel" }),
       });
       if (res.ok) {
-        await fetchOrderDetails();
+        const d = await res.json();
+        if (d.order) {
+          setOrder(d.order);
+        }
       } else {
         const d = await res.json();
         alert(d.message || "Failed to cancel order");
+        // Re-sync on failure
+        fetchOrderDetails();
       }
     } catch (err) {
       console.error("Cancel error:", err);
@@ -731,26 +749,46 @@ export default function OrderDetailsPage({
             ))}
           </div>
 
-          <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
-            <div className="flex justify-between">
-              <span>Items Subtotal</span>
-              <span>৳{order.itemsPrice.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Delivery Fee ({order.deliveryMethod})</span>
-              <span>৳{order.shippingPrice.toFixed(2)}</span>
-            </div>
-            {order.tipAmount > 0 && (
-              <div className="flex justify-between text-emerald-600">
-                <span>Rider Tip</span>
-                <span>৳{order.tipAmount.toFixed(2)}</span>
+          {(() => {
+            const calculatedSubtotal =
+              order.itemsPrice && order.itemsPrice > 0
+                ? order.itemsPrice
+                : (order.orderItems || []).reduce(
+                    (sum, it) => sum + (Number(it.price) || 0) * (Number(it.quantity) || 1),
+                    0
+                  );
+            const calculatedShipping =
+              typeof order.shippingPrice === "number" ? order.shippingPrice : 45;
+            const calculatedTip =
+              typeof order.tipAmount === "number" ? order.tipAmount : 0;
+            const calculatedTotal =
+              order.totalPrice && order.totalPrice > 0
+                ? order.totalPrice
+                : calculatedSubtotal + calculatedShipping + calculatedTip;
+
+            return (
+              <div className="pt-3 border-t border-gray-100 dark:border-gray-800 space-y-1.5 text-xs text-gray-600 dark:text-gray-400">
+                <div className="flex justify-between">
+                  <span>Items Subtotal</span>
+                  <span>৳{calculatedSubtotal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Delivery Fee ({order.deliveryMethod || "Standard"})</span>
+                  <span>৳{calculatedShipping.toFixed(2)}</span>
+                </div>
+                {calculatedTip > 0 && (
+                  <div className="flex justify-between text-emerald-600">
+                    <span>Rider Tip</span>
+                    <span>৳{calculatedTip.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-sm text-gray-900 dark:text-gray-100 pt-2 border-t">
+                  <span>Total Amount</span>
+                  <span className="text-orange-600">৳{calculatedTotal.toFixed(2)}</span>
+                </div>
               </div>
-            )}
-            <div className="flex justify-between font-bold text-sm text-gray-900 dark:text-gray-100 pt-2 border-t">
-              <span>Total Amount</span>
-              <span className="text-orange-600">৳{order.totalPrice.toFixed(2)}</span>
-            </div>
-          </div>
+            );
+          })()}
         </div>
 
         {/* Delivery & Payment Info */}
