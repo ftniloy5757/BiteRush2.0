@@ -17,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { Utensils } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { toast } from "sonner";
 
 interface SignupFormData {
@@ -105,12 +106,21 @@ export default function Signup() {
       <Card className="w-full max-w-2xl shadow-2xl bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 relative rounded-3xl overflow-hidden">
         <CardHeader className="space-y-1 text-center pt-8">
           <div className="flex items-center justify-center mb-2">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md shadow-orange-500/20 mr-3">
-              <Utensils className="w-6 h-6" />
-            </div>
-            <CardTitle className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
-              BiteRush
-            </CardTitle>
+            <Link href="/" className="inline-flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl overflow-hidden shadow-md shadow-orange-500/20 border border-orange-500/20 bg-white dark:bg-gray-800 p-0.5">
+                <Image
+                  src="/BiteRush2_Logo.png"
+                  alt="BiteRush Logo"
+                  width={48}
+                  height={48}
+                  className="w-full h-full object-contain rounded-xl"
+                  priority
+                />
+              </div>
+              <CardTitle className="text-3xl font-extrabold text-gray-900 dark:text-gray-100 tracking-tight">
+                BiteRush
+              </CardTitle>
+            </Link>
           </div>
           <CardTitle className="text-xl font-bold text-orange-600 dark:text-orange-500">
             Fulfill Your Cravings

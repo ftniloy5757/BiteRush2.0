@@ -50,10 +50,10 @@ export default async function Home() {
             </div>
 
             <div className="relative">
-              <div className="aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/30 relative">
+              <div className="aspect-[16/9] sm:aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/30 relative bg-orange-950/20">
                 <Image
-                  src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&h=600&fit=crop"
-                  alt="Delicious gourmet food feast"
+                  src="/BiteRush2_Cover.png"
+                  alt="BiteRush Official Cover"
                   fill
                   className="object-cover"
                   priority

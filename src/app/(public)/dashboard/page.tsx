@@ -176,32 +176,46 @@ export default function DashboardGreeting() {
 
   return (
     <div className="space-y-8 pb-12">
-      {/* Greeting Banner */}
-      <div className="bg-gradient-to-r from-orange-500 to-amber-600 rounded-3xl p-6 sm:p-10 text-white shadow-xl relative overflow-hidden">
-        <div className="relative z-10 max-w-2xl space-y-3">
-          <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit text-xs font-semibold">
-            <Sparkles className="h-3.5 w-3.5" /> BiteRush 2.0
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-extrabold">
-            Good {timeOfDay}, {firstName}! 🍔
-          </h1>
-          <p className="text-orange-100 text-sm sm:text-base">
-            Craving something delicious? Explore our curated recommendations or track active deliveries.
-          </p>
+      {/* Greeting Banner with Cover */}
+      <div className="relative bg-gradient-to-r from-orange-500 via-amber-500 to-orange-600 rounded-3xl p-6 sm:p-10 text-white shadow-xl overflow-hidden">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+          <div className="lg:col-span-7 space-y-4">
+            <div className="flex items-center gap-2 bg-white/20 backdrop-blur-md px-3 py-1 rounded-full w-fit text-xs font-semibold">
+              <Sparkles className="h-3.5 w-3.5" /> BiteRush 2.0 Official
+            </div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              Good {timeOfDay}, {firstName}! 🍔
+            </h1>
+            <p className="text-orange-100 text-sm sm:text-base leading-relaxed">
+              Craving something delicious? Explore our curated culinary recommendations, discover chef specials, or track your live deliveries in real time.
+            </p>
 
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Link
-              href="/menu"
-              className="bg-white text-orange-600 hover:bg-orange-50 font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5"
-            >
-              <Utensils className="h-4 w-4" /> Browse Full Menu
-            </Link>
-            <Link
-              href="/orders"
-              className="bg-orange-700/60 hover:bg-orange-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm border border-white/30 transition-all flex items-center gap-1.5"
-            >
-              <Clock className="h-4 w-4" /> Track Orders
-            </Link>
+            <div className="flex flex-wrap gap-3 pt-2">
+              <Link
+                href="/menu"
+                className="bg-white text-orange-600 hover:bg-orange-50 font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm shadow-md transition-all flex items-center gap-1.5"
+              >
+                <Utensils className="h-4 w-4" /> Browse Full Menu
+              </Link>
+              <Link
+                href="/orders"
+                className="bg-orange-700/60 hover:bg-orange-700 text-white font-bold px-5 py-2.5 rounded-xl text-xs sm:text-sm border border-white/30 transition-all flex items-center gap-1.5"
+              >
+                <Clock className="h-4 w-4" /> Track Orders
+              </Link>
+            </div>
+          </div>
+
+          <div className="lg:col-span-5 hidden sm:block">
+            <div className="relative aspect-[16/9] rounded-2xl overflow-hidden shadow-2xl border-2 border-white/40 group hover:scale-[1.02] transition-transform bg-orange-950/20">
+              <Image
+                src="/BiteRush2_Cover.png"
+                alt="BiteRush Official Cover"
+                fill
+                className="object-cover"
+                priority
+              />
+            </div>
           </div>
         </div>
       </div>

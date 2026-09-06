@@ -109,7 +109,7 @@ export default function EditUserPage() {
 
       if (userId === "new") {
         // Create new user
-        response = await fetch("/api/admin", {
+        response = await fetch("/api/admin/users", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -140,7 +140,7 @@ export default function EditUserPage() {
 
       if (userId === "new") {
         // Redirect to users list after creating new user
-        router.push("/admin");
+        router.push("/admin/users");
       } else {
         // Refresh data after update
         mutate();
@@ -353,9 +353,10 @@ export default function EditUserPage() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="user">User</SelectItem>
-                          <SelectItem value="admin">Admin</SelectItem>
+                          <SelectItem value="customer">Customer</SelectItem>
+                          <SelectItem value="restaurant">Restaurant</SelectItem>
                           <SelectItem value="rider">Rider</SelectItem>
+                          <SelectItem value="admin">Admin</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />

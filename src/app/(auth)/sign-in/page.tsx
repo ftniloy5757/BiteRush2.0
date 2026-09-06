@@ -3,6 +3,7 @@
 import { signIn } from "next-auth/react";
 import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Image from "next/image";
 import { Utensils, Mail, Lock, ArrowRight, Eye, EyeOff, ShieldCheck, KeyRound } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -124,9 +125,18 @@ function SignInForm() {
         <div className="bg-white dark:bg-gray-900 rounded-3xl shadow-xl p-8 border border-gray-100 dark:border-gray-800">
           {/* Logo & Header */}
           <div className="text-center mb-8 space-y-2">
-            <div className="w-14 h-14 bg-gradient-to-tr from-orange-500 to-amber-500 rounded-2xl flex items-center justify-center text-white mx-auto shadow-md shadow-orange-500/20">
-              <Utensils className="w-7 h-7" />
-            </div>
+            <Link href="/" className="inline-block">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden mx-auto shadow-lg shadow-orange-500/20 border-2 border-orange-500/20 bg-white dark:bg-gray-800 p-1 group hover:scale-105 transition-transform">
+                <Image
+                  src="/BiteRush2_Logo.png"
+                  alt="BiteRush Logo"
+                  width={64}
+                  height={64}
+                  className="w-full h-full object-contain rounded-xl"
+                  priority
+                />
+              </div>
+            </Link>
             <h1 className="text-2xl font-black text-gray-900 dark:text-gray-100 tracking-tight">
               {step === "CREDENTIALS" ? "Welcome to BiteRush" : "Two-Factor Verification"}
             </h1>

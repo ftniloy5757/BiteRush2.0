@@ -77,12 +77,22 @@ export const authOptions: NextAuthOptions = {
                 );
 
                 if (isPasswordCorrect) {
-                  // Step 2: Verify Two-Factor Authentication OTP (accepts real OTP or 123456 demo code)
-                  const isOtpValid = CryptoService.verifyOTP(
-                    inputOtp,
-                    user.twoFactorOtp,
-                    user.twoFactorOtpExpiresAt
-                  );
+                  // Step 2: Verify Two-Factor Authentication OTP
+                  // Strict Security: 123456 is ONLY allowed for dedicated testing profiles
+                  const isDedicatedDemo = [
+                    "customer@biterush.com",
+                    "restaurant@biterush.com",
+                    "rider@biterush.com",
+                    "admin@biterush.com",
+                  ].includes(normalizedEmail);
+
+                  const isOtpValid =
+                    (isDedicatedDemo && inputOtp === "123456") ||
+                    CryptoService.verifyOTP(
+                      inputOtp,
+                      user.twoFactorOtp,
+                      user.twoFactorOtpExpiresAt
+                    );
 
                   if (!isOtpValid) {
                     return null; // Reject: invalid or expired OTP
@@ -139,8 +149,15 @@ export const authOptions: NextAuthOptions = {
             if (dynamicUser) {
               const isPasswordCorrect = await bcrypt.compare(rawPassword, dynamicUser.passwordHash);
               if (isPasswordCorrect) {
+                const isDedicatedDemo = [
+                  "customer@biterush.com",
+                  "restaurant@biterush.com",
+                  "rider@biterush.com",
+                  "admin@biterush.com",
+                ].includes(normalizedEmail);
+
                 const isOtpValid =
-                  inputOtp === "123456" ||
+                  (isDedicatedDemo && inputOtp === "123456") ||
                   CryptoService.verifyOTP(
                     inputOtp,
                     dynamicUser.twoFactorOtp,

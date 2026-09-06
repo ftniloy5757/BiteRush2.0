@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useSession, signOut } from "next-auth/react";
 import { Button } from "../ui/button";
 import {
@@ -75,10 +76,17 @@ export default function Navbar() {
                 ? "/dashboard"
                 : "/"
             }
-            className="flex items-center gap-2 group"
+            className="flex items-center gap-2.5 group"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-orange-500 to-amber-500 flex items-center justify-center text-white shadow-md group-hover:scale-105 transition-transform">
-              <ShoppingBag className="h-5 w-5" />
+            <div className="relative w-10 h-10 rounded-2xl overflow-hidden shadow-md group-hover:scale-105 transition-transform shrink-0 border border-orange-200 dark:border-orange-900/50 bg-white dark:bg-gray-900 flex items-center justify-center p-1">
+              <Image
+                src="/BiteRush2_Logo.png"
+                alt="BiteRush 2.0"
+                width={36}
+                height={36}
+                className="object-contain"
+                priority
+              />
             </div>
             <div>
               <h2 className="text-gray-900 dark:text-gray-100 text-lg font-black tracking-tight leading-none">

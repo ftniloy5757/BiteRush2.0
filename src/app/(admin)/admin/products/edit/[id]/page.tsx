@@ -4,6 +4,9 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
+import Link from "next/link";
+import { ArrowLeft, Save, Sparkles } from "lucide-react";
+import { toast } from "sonner";
 
 const categories = ["burger", "pizza", "pasta", "dessert", "drink", "other"];
 
@@ -52,7 +55,7 @@ export default function EditProductPage() {
 
         setFormData({
           name: product.name,
-          description: product.description,
+          description: product.description || "",
           price: product.price.toString(),
           category: product.category,
           image: product.image,
@@ -72,11 +75,14 @@ export default function EditProductPage() {
     }
   }, [productId]);
 
-  // Check authentication
+  // Check authentication (allow both admin and restaurant)
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push(`/sign-in?callbackUrl=/admin/products/edit/${productId}`);
-    } else if (status === "authenticated" && session?.user?.role !== "restaurant") {
+    } else if (
+      status === "authenticated" &&
+      !["admin", "restaurant"].includes(session?.user?.role || "")
+    ) {
       router.push("/unauthorized");
     }
   }, [status, session, router, productId]);
@@ -102,7 +108,6 @@ export default function EditProductPage() {
     setError(null);
 
     try {
-      // Validate price
       const price = parseFloat(formData.price);
       if (isNaN(price) || price <= 0) {
         throw new Error("Price must be a positive number");
@@ -126,9 +131,11 @@ export default function EditProductPage() {
         throw new Error(errorData.message || "Failed to update product");
       }
 
+      toast.success("Dish updated successfully!");
       router.push("/admin/products");
     } catch (error: any) {
       setError(error.message || "An unexpected error occurred");
+      toast.error(error.message || "Error updating product");
       console.error("Error updating product:", error);
     } finally {
       setIsSubmitting(false);
@@ -137,90 +144,104 @@ export default function EditProductPage() {
 
   if (status === "loading" || (status === "authenticated" && isLoading)) {
     return (
-      <div className="flex justify-center items-center min-h-screen">
-        <div className="text-xl">Loading...</div>
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (status === "authenticated" && session?.user?.role !== "restaurant") {
-    return null; // Will redirect in useEffect
+  if (
+    status === "authenticated" &&
+    !["admin", "restaurant"].includes(session?.user?.role || "")
+  ) {
+    return null;
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="max-w-2xl mx-auto">
-        <h1 className="text-2xl font-bold mb-6">Edit Product</h1>
-
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-            {error}
-          </div>
-        )}
-
-        <form
-          onSubmit={handleSubmit}
-          className="bg-white shadow-md rounded-lg p-6"
+    <div className="container mx-auto px-4 py-8 max-w-3xl">
+      <div className="mb-6">
+        <Link
+          href="/admin/products"
+          className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-orange-600 dark:text-gray-400 dark:hover:text-orange-400 transition-colors mb-2"
         >
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="name"
-            >
-              Product Name *
-            </label>
-            <input
-              type="text"
-              id="name"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+          <ArrowLeft className="h-3.5 w-3.5" /> Back to Products
+        </Link>
+        <h1 className="text-3xl font-black text-gray-900 dark:text-gray-100">Edit Dish</h1>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+          Update dish pricing, availability, description, or imagery
+        </p>
+      </div>
 
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="description"
-            >
-              Description *
-            </label>
-            <textarea
-              id="description"
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              required
-              rows={4}
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+      {error && (
+        <div className="bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 px-4 py-3 rounded-2xl mb-6 text-sm">
+          {error}
+        </div>
+      )}
 
-          <div className="mb-4">
+      <form
+        onSubmit={handleSubmit}
+        className="bg-white dark:bg-gray-900 shadow-xl rounded-3xl p-6 sm:p-8 border border-gray-200 dark:border-gray-800 space-y-6 transition-colors"
+      >
+        <div>
+          <label
+            className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-2"
+            htmlFor="name"
+          >
+            Dish Name *
+          </label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+            className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+
+        <div>
+          <label
+            className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-2"
+            htmlFor="description"
+          >
+            Description & Ingredients *
+          </label>
+          <textarea
+            id="description"
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            required
+            rows={3}
+            className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
             <label
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-2"
               htmlFor="price"
             >
-              Price (৳) *
+              Price in Taka (৳) *
             </label>
             <input
               type="number"
-              step="0.01"
-              min="0"
+              step="1"
+              min="1"
               id="price"
               name="price"
               value={formData.price}
               onChange={handleChange}
               required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
             />
           </div>
 
-          <div className="mb-4">
+          <div>
             <label
-              className="block text-gray-700 text-sm font-bold mb-2"
+              className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-2"
               htmlFor="category"
             >
               Category *
@@ -231,7 +252,7 @@ export default function EditProductPage() {
               value={formData.category}
               onChange={handleChange}
               required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+              className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 capitalize"
             >
               {categories.map((category) => (
                 <option key={category} value={category}>
@@ -240,79 +261,82 @@ export default function EditProductPage() {
               ))}
             </select>
           </div>
+        </div>
 
-          <div className="mb-4">
-            <label
-              className="block text-gray-700 text-sm font-bold mb-2"
-              htmlFor="image"
-            >
-              Image URL *
-            </label>
-            <input
-              type="url"
-              id="image"
-              name="image"
-              value={formData.image}
-              onChange={handleChange}
-              required
-              className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
-            />
-          </div>
+        <div>
+          <label
+            className="block text-xs font-extrabold text-gray-700 dark:text-gray-300 mb-2"
+            htmlFor="image"
+          >
+            Dish Image URL or Base64 *
+          </label>
+          <input
+            type="text"
+            id="image"
+            name="image"
+            value={formData.image}
+            onChange={handleChange}
+            required
+            className="w-full rounded-xl border border-gray-300 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 px-4 py-3 text-sm text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+        </div>
 
-          <div className="mb-4 flex items-center">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+          <label className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 cursor-pointer">
             <input
               type="checkbox"
               id="inStock"
               name="inStock"
               checked={formData.inStock}
               onChange={handleChange}
-              className="mr-2"
+              className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
             />
-            <label
-              className="text-gray-700 text-sm font-bold"
-              htmlFor="inStock"
-            >
-              In Stock
-            </label>
-          </div>
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-200">
+              Ready / In Stock
+            </span>
+          </label>
 
-          <div className="mb-6 flex items-center">
+          <label className="flex items-center gap-3 p-3.5 rounded-xl border border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-950 cursor-pointer">
             <input
               type="checkbox"
               id="featured"
               name="featured"
               checked={formData.featured}
               onChange={handleChange}
-              className="mr-2"
+              className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
             />
-            <label
-              className="text-gray-700 text-sm font-bold"
-              htmlFor="featured"
-            >
-              Featured Product
-            </label>
-          </div>
+            <span className="text-xs font-bold text-gray-800 dark:text-gray-200 flex items-center gap-1">
+              <Sparkles className="h-3.5 w-3.5 text-orange-500" /> Feature on Feed
+            </span>
+          </label>
+        </div>
 
-          <div className="flex items-center justify-between">
-            <button
-              type="button"
-              onClick={() => router.push("/admin/products")}
-              className="bg-gray-500 hover:bg-gray-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className={`bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline ${
-                isSubmitting ? "opacity-50 cursor-not-allowed" : ""
-              }`}
-            >
-              {isSubmitting ? "Updating..." : "Update Product"}
-            </button>
-          </div>
-        </form>
-      </div>
+        <div className="flex items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-800">
+          <button
+            type="button"
+            onClick={() => router.push("/admin/products")}
+            className="px-5 py-2.5 rounded-xl border border-gray-300 dark:border-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 font-semibold text-xs transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="inline-flex items-center gap-2 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold py-2.5 px-6 rounded-xl shadow-md transition-all text-xs disabled:opacity-50"
+          >
+            {isSubmitting ? (
+              <>
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                Saving Changes...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4" /> Save Changes
+              </>
+            )}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

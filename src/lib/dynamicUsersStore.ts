@@ -30,6 +30,7 @@ export interface StoredUser {
   isTwoFactorEnabled: boolean;
   isTwoFactorVerified: boolean;
   savedAddresses?: any[];
+  bio?: string;
   integrityMac?: string;
   createdAt?: string;
   updatedAt?: string;

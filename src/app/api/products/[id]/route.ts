@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, context: any) {
 
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || !session.user?.role || !["admin", "restaurant"].includes(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -67,7 +67,7 @@ export async function PUT(req: NextRequest, context: any) {
   }
 }
 
-// DELETE product (admin only)
+// DELETE product (admin or restaurant)
 export async function DELETE(req: NextRequest, context: any) {
   try {
     const { id } = await context.params;
@@ -75,7 +75,7 @@ export async function DELETE(req: NextRequest, context: any) {
 
     // Check authentication and authorization
     const session = await getServerSession(authOptions);
-    if (!session || session.user.role !== "restaurant") {
+    if (!session || !session.user?.role || !["admin", "restaurant"].includes(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

@@ -88,6 +88,16 @@ export function formatECCPrivateKey(key: ECCPrivateKey): string {
   return bigIntToHex(key.d, 32);
 }
 
+// Verified deterministic default master keypair for Version 1 (used if not set in environment)
+const DEFAULT_V1_RSA_PUBLIC =
+  "010001:bac2534b78b9342b2c45e7ad375c33a6e1a5a8617cc5a2d38541a28adc60e33ffbbb1214e990a3dda807bdc1aad2a7bd53e204c244b7480224dfdf45dfafb1d0677f8b3dcb4e7ee74e5755b362b83c3be7a3a2664948ca6670008ebad5ebdf8bf08ecf00104281195a1ed84b715031e991449863d2527f2fca136ee767452fab";
+const DEFAULT_V1_RSA_PRIVATE =
+  "9184c314466fc0a7772accf759f07ccaa67dc6b2975f039d5ef2a26d228457edcdfe987b34f69fc8219a4e8fedc39031e47f7307d03523659047e417f4d058725ebb6ff0a70087b5f4645ff11b852708e8f775a18070367f424640d460bdaa40c087d4526b64457cd982663de812c3f15c8d940a1866bcc6bf76b216d85c8069:bac2534b78b9342b2c45e7ad375c33a6e1a5a8617cc5a2d38541a28adc60e33ffbbb1214e990a3dda807bdc1aad2a7bd53e204c244b7480224dfdf45dfafb1d0677f8b3dcb4e7ee74e5755b362b83c3be7a3a2664948ca6670008ebad5ebdf8bf08ecf00104281195a1ed84b715031e991449863d2527f2fca136ee767452fab";
+const DEFAULT_V1_ECC_PUBLIC =
+  "5bfeaa5f355c8764caaf81f9bc4b68a01fd4637eb21cca2bcac101f1ed857991:94926855bf94d1f377b7fe762369069cc9343b87ad36b042df460303db465598";
+const DEFAULT_V1_ECC_PRIVATE =
+  "48b91a1c216daacb13590c58202aa6ac9f685c8b97946e9b56591979ead0ab41";
+
 /**
  * Key Manager class responsible for key lifecycle, multi-version rotation, and distribution.
  */
@@ -102,26 +112,25 @@ export class KeyManager {
       return keyRings.get(version)!;
     }
 
-    // Try loading from environment variables if version == 1
-    if (
-      version === 1 &&
-      process.env.CRYPTO_RSA_PUBLIC_KEY &&
-      process.env.CRYPTO_RSA_PRIVATE_KEY &&
-      process.env.CRYPTO_ECC_PUBLIC_KEY &&
-      process.env.CRYPTO_ECC_PRIVATE_KEY
-    ) {
+    // Load version 1 keys from environment or deterministic fallback
+    if (version === 1) {
       try {
+        const rsaPubStr = process.env.CRYPTO_RSA_PUBLIC_KEY || DEFAULT_V1_RSA_PUBLIC;
+        const rsaPrivStr = process.env.CRYPTO_RSA_PRIVATE_KEY || DEFAULT_V1_RSA_PRIVATE;
+        const eccPubStr = process.env.CRYPTO_ECC_PUBLIC_KEY || DEFAULT_V1_ECC_PUBLIC;
+        const eccPrivStr = process.env.CRYPTO_ECC_PRIVATE_KEY || DEFAULT_V1_ECC_PRIVATE;
+
         const ring: KeyRing = {
           version: 1,
-          rsaPublicKey: parseRSAPublicKey(process.env.CRYPTO_RSA_PUBLIC_KEY),
-          rsaPrivateKey: parseRSAPrivateKey(process.env.CRYPTO_RSA_PRIVATE_KEY),
-          eccPublicKey: parseECCPublicKey(process.env.CRYPTO_ECC_PUBLIC_KEY),
-          eccPrivateKey: parseECCPrivateKey(process.env.CRYPTO_ECC_PRIVATE_KEY),
+          rsaPublicKey: parseRSAPublicKey(rsaPubStr),
+          rsaPrivateKey: parseRSAPrivateKey(rsaPrivStr),
+          eccPublicKey: parseECCPublicKey(eccPubStr),
+          eccPrivateKey: parseECCPrivateKey(eccPrivStr),
         };
         keyRings.set(1, ring);
         return ring;
       } catch (err) {
-        console.warn("Failed parsing environment keys, generating fresh keyring:", err);
+        console.warn("Failed loading version 1 keys, generating fallback:", err);
       }
     }
 

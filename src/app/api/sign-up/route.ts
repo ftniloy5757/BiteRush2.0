@@ -74,7 +74,7 @@ export const POST = async (request: Request) => {
     role: role || "customer",
   });
 
-  let createdUserId: string | null = null;
+  let createdUserId: string | undefined = undefined;
 
   // 6. Attempt primary save in MongoDB
   try {

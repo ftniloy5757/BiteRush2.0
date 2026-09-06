@@ -98,11 +98,9 @@ export function generateVerificationOtp(masterSecret: string = "biterush_otp_mas
 export function verifyStoredOtp(
   inputOtp: string,
   storedOtp: string | undefined,
-  expiresAt: Date | undefined
+  expiresAt: Date | string | number | undefined
 ): boolean {
   if (!inputOtp) return false;
-  // Problem-03: The only demo 2FA code is 123456
-  if (inputOtp.trim() === "123456") return true;
   if (!storedOtp || !expiresAt) return false;
   if (Date.now() > new Date(expiresAt).getTime()) return false;
   return inputOtp.trim() === storedOtp.trim();

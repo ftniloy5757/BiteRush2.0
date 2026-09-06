@@ -5,6 +5,13 @@ import mongoose from "mongoose";
 import { CryptoService } from "@/lib/crypto/cryptoService";
 import { findDynamicUserById, updateDynamicUser } from "@/lib/dynamicUsersStore";
 
+const DEDICATED_TESTING_EMAILS = [
+  "customer@biterush.com",
+  "restaurant@biterush.com",
+  "rider@biterush.com",
+  "admin@biterush.com",
+];
+
 export const POST = async (request: Request) => {
   const { userId, emailOtp, code } = await request.json();
   const inputCode = (code || emailOtp || "").trim();
@@ -17,9 +24,20 @@ export const POST = async (request: Request) => {
       if (conn && mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(userId)) {
         const user = await User.findById(userId);
         if (user) {
+          const userEmail = (
+            user.email === "[ENCRYPTED]" && user.emailEncrypted
+              ? CryptoService.decryptProfile(user.emailEncrypted)
+              : user.email || ""
+          ).toLowerCase().trim();
+
+          const isTestingUser = DEDICATED_TESTING_EMAILS.includes(userEmail);
           const storedOtp = user.emailOtp || user.twoFactorOtp;
           const expiresAt = user.emailOtpExpiresAt || user.twoFactorOtpExpiresAt;
-          const isValid = inputCode === "123456" || CryptoService.verifyOTP(inputCode, storedOtp, expiresAt);
+
+          // Strict Security: 123456 is ONLY valid for the 4 dedicated testing emails
+          const isValid =
+            (isTestingUser && inputCode === "123456") ||
+            CryptoService.verifyOTP(inputCode, storedOtp, expiresAt);
 
           if (!isValid) {
             return new Response(
@@ -45,9 +63,15 @@ export const POST = async (request: Request) => {
     if (!userVerified) {
       const dynamicUser = findDynamicUserById(userId);
       if (dynamicUser) {
+        const userEmail = (dynamicUser.email || "").toLowerCase().trim();
+        const isTestingUser = DEDICATED_TESTING_EMAILS.includes(userEmail);
         const storedOtp = dynamicUser.emailOtp || dynamicUser.twoFactorOtp;
         const expiresAt = dynamicUser.emailOtpExpiresAt || dynamicUser.twoFactorOtpExpiresAt;
-        const isValid = inputCode === "123456" || CryptoService.verifyOTP(inputCode, storedOtp, expiresAt);
+
+        // Strict Security: 123456 is ONLY valid for the 4 dedicated testing emails
+        const isValid =
+          (isTestingUser && inputCode === "123456") ||
+          CryptoService.verifyOTP(inputCode, storedOtp, expiresAt);
 
         if (!isValid) {
           return new Response(
@@ -67,13 +91,6 @@ export const POST = async (request: Request) => {
     }
 
     if (!userVerified) {
-      // If code is universal demo code 123456, allow verification
-      if (inputCode === "123456") {
-        return new Response(
-          JSON.stringify({ success: true, message: "2FA Verification successful" }),
-          { status: 200 }
-        );
-      }
       return new Response(
         JSON.stringify({ success: false, message: "User not found or code expired" }),
         { status: 404 }

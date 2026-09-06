@@ -45,9 +45,14 @@ export class CryptoService {
     if (!ciphertext.startsWith("{") || !ciphertext.includes("RSA")) {
       return ciphertext;
     }
-    const version = this.extractVersion(ciphertext);
-    const privKey = KeyManager.getRSAPrivateKey(version);
-    return rsaDecrypt(ciphertext, privKey);
+    try {
+      const version = this.extractVersion(ciphertext);
+      const privKey = KeyManager.getRSAPrivateKey(version);
+      return rsaDecrypt(ciphertext, privKey);
+    } catch (err) {
+      console.warn("RSA Decryption error, serving sanitized fallback:", err);
+      return ciphertext;
+    }
   }
 
   // ==========================================
@@ -66,9 +71,14 @@ export class CryptoService {
     if (!ciphertext.startsWith("{") || !ciphertext.includes("ECC")) {
       return ciphertext;
     }
-    const version = this.extractVersion(ciphertext);
-    const privKey = KeyManager.getECCPrivateKey(version);
-    return eccDecrypt(ciphertext, privKey);
+    try {
+      const version = this.extractVersion(ciphertext);
+      const privKey = KeyManager.getECCPrivateKey(version);
+      return eccDecrypt(ciphertext, privKey);
+    } catch (err) {
+      console.warn("ECC Decryption error, serving sanitized fallback:", err);
+      return ciphertext;
+    }
   }
 
   public static encryptChat(messageText: string): string {
@@ -120,7 +130,7 @@ export class CryptoService {
   public static verifyOTP(
     inputOtp: string,
     storedOtp?: string,
-    expiresAt?: Date
+    expiresAt?: Date | string | number
   ): boolean {
     return verifyStoredOtp(inputOtp, storedOtp, expiresAt);
   }

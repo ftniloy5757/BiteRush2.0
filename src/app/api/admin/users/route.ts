@@ -44,8 +44,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Filter by role if provided
-    if (role && ["user", "admin", "rider"].includes(role)) {
-      query.role = role;
+    if (role && ["customer", "user", "admin", "rider", "restaurant"].includes(role)) {
+      query.role = role === "user" ? "customer" : role;
     }
 
     // Calculate pagination

@@ -132,6 +132,9 @@ export async function PUT(
       return NextResponse.json({ message: "Not authenticated" }, { status: 401 });
     }
 
+    const body = await req.json();
+    const { title = "", content = "", category = "" } = body;
+
     const conn = await connectDB();
     if (conn && mongoose.connection.readyState === 1) {
       try {

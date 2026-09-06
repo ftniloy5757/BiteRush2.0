@@ -154,7 +154,36 @@ export async function PATCH(req: NextRequest, context: any) {
       { new: true, runValidators: true }
     ).select("-passwordHash -phoneOtp -emailOtp -resetToken");
 
-    return NextResponse.json(updatedUser);
+    if (!updatedUser) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const userObj = updatedUser.toObject();
+    try {
+      if (updatedUser.firstNameEncrypted) {
+        userObj.firstName = CryptoService.decryptProfile(updatedUser.firstNameEncrypted);
+      }
+      if (updatedUser.lastNameEncrypted) {
+        userObj.lastName = CryptoService.decryptProfile(updatedUser.lastNameEncrypted);
+      }
+      if (updatedUser.emailEncrypted) {
+        userObj.email = CryptoService.decryptProfile(updatedUser.emailEncrypted);
+      }
+      if (updatedUser.contactNumberEncrypted) {
+        userObj.contactNumber = CryptoService.decryptProfile(updatedUser.contactNumberEncrypted);
+      }
+      if (updatedUser.restaurantNameEncrypted) {
+        userObj.restaurantName = CryptoService.decryptProfile(updatedUser.restaurantNameEncrypted);
+      }
+      if (updatedUser.restaurantAddressEncrypted) {
+        userObj.restaurantAddress = CryptoService.decryptProfile(updatedUser.restaurantAddressEncrypted);
+      }
+      if (updatedUser.vehicleTypeEncrypted) {
+        userObj.vehicleType = CryptoService.decryptProfile(updatedUser.vehicleTypeEncrypted);
+      }
+    } catch {}
+
+    return NextResponse.json(userObj);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }

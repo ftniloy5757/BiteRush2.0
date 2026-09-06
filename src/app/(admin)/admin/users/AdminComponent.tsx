@@ -216,9 +216,10 @@ export default function AdminUsersPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Roles</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                  <SelectItem value="user">User</SelectItem>
+                  <SelectItem value="customer">Customer</SelectItem>
+                  <SelectItem value="restaurant">Restaurant</SelectItem>
                   <SelectItem value="rider">Rider</SelectItem>
+                  <SelectItem value="admin">Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -256,12 +257,15 @@ export default function AdminUsersPage() {
                       <TableCell>{user.email}</TableCell>
                       <TableCell>
                         <Badge
-                          variant={
+                          variant="outline"
+                          className={
                             user.role === "admin"
-                              ? "destructive"
+                              ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 border-red-300 dark:border-red-800 uppercase text-[10px] font-bold"
+                              : user.role === "restaurant"
+                              ? "bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 uppercase text-[10px] font-bold"
                               : user.role === "rider"
-                              ? "default"
-                              : "outline"
+                              ? "bg-violet-100 text-violet-700 dark:bg-violet-950 dark:text-violet-300 border-violet-300 dark:border-violet-800 uppercase text-[10px] font-bold"
+                              : "bg-orange-100 text-orange-700 dark:bg-orange-950 dark:text-orange-300 border-orange-300 dark:border-orange-800 uppercase text-[10px] font-bold"
                           }
                         >
                           {user.role}
