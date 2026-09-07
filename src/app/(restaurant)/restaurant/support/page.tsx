@@ -44,7 +44,11 @@ export default function RestaurantSupportPage() {
             <div key={order._id} className="bg-white dark:bg-gray-900 rounded-xl shadow-md border border-gray-200 dark:border-gray-800 p-5">
               <div className="flex justify-between items-center mb-3">
                 <span className="font-bold">Order #{order._id.slice(-6).toUpperCase()}</span>
-                <span className="text-sm text-gray-500">{order.user?.firstName} {order.user?.lastName}</span>
+                <span className="text-sm text-gray-500">
+                  {order.user?.firstName && !order.user.firstName.includes("[ENCRYPTED]")
+                    ? `${order.user.firstName} ${order.user.lastName && !order.user.lastName.includes("[ENCRYPTED]") ? order.user.lastName : ""}`.trim()
+                    : `Customer #${order._id.slice(-4)}`}
+                </span>
               </div>
               {order.supportTickets.map((ticket, i) => (
                 <div key={i} className={`p-3 rounded-lg mb-2 ${ticket.status === "open" ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800" : "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"}`}>

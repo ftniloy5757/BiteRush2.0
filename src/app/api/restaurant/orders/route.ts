@@ -6,6 +6,8 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
 import { getDynamicOrders } from "@/lib/dynamicOrdersStore";
 
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
+
 // GET all orders for restaurant
 export async function GET() {
   try {
@@ -17,22 +19,25 @@ export async function GET() {
     const conn = await connectDB();
     if (conn && mongoose.connection.readyState === 1) {
       try {
-        const orders = await Order.find()
-          .populate("user", "firstName lastName email contactNumber")
-          .populate("rider", "firstName lastName contactNumber vehicleType")
+        const rawOrders = await Order.find()
+          .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+          .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted")
           .sort({ createdAt: -1 });
 
-        if (orders.length > 0) {
-          return NextResponse.json(orders, { status: 200 });
+        if (rawOrders.length > 0) {
+          const decryptedOrders = rawOrders.map((ord) => decryptOrderPayload(ord));
+          return NextResponse.json(decryptedOrders, { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB query error in restaurant orders, serving dynamic store:", dbErr);
       }
     }
 
-    return NextResponse.json(getDynamicOrders(), { status: 200 });
+    const dynamicOrders = getDynamicOrders().map((ord) => decryptOrderPayload(ord));
+    return NextResponse.json(dynamicOrders, { status: 200 });
   } catch (error) {
     console.error("Error fetching restaurant orders, serving fallback:", error);
-    return NextResponse.json(getDynamicOrders(), { status: 200 });
+    const dynamicOrders = getDynamicOrders().map((ord) => decryptOrderPayload(ord));
+    return NextResponse.json(dynamicOrders, { status: 200 });
   }
 }

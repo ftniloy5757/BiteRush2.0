@@ -6,6 +6,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
 import { DEMO_IDS } from "@/lib/demoData";
 import { getDynamicOrders } from "@/lib/dynamicOrdersStore";
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
 
 // GET assigned deliveries for rider
 export async function GET() {
@@ -19,11 +20,13 @@ export async function GET() {
     if (conn && mongoose.connection.readyState === 1) {
       try {
         const orders = await Order.find({ rider: session.user.id })
-          .populate("user", "firstName lastName email contactNumber")
+          .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+          .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted")
           .sort({ createdAt: -1 });
 
         if (orders.length > 0) {
-          return NextResponse.json(orders, { status: 200 });
+          const decryptedOrders = orders.map((o) => decryptOrderPayload(o));
+          return NextResponse.json(decryptedOrders, { status: 200 });
         }
       } catch (err) {
         console.warn("DB rider orders lookup error, serving dynamic store:", err);
@@ -32,19 +35,23 @@ export async function GET() {
 
     // Dynamic store filter for rider
     const allOrders = getDynamicOrders();
-    const riderFallbackOrders = allOrders.filter(
-      (o: any) =>
-        o.rider?._id === session.user.id ||
-        o.rider?._id === DEMO_IDS.RIDER ||
-        o.status === "out_for_delivery" ||
-        (o.status === "delivered" && o.rider)
-    );
+    const riderFallbackOrders = allOrders
+      .filter(
+        (o: any) =>
+          o.rider?._id === session.user.id ||
+          o.rider?._id === DEMO_IDS.RIDER ||
+          o.status === "out_for_delivery" ||
+          (o.status === "delivered" && o.rider)
+      )
+      .map((o: any) => decryptOrderPayload(o));
 
     return NextResponse.json(riderFallbackOrders, { status: 200 });
   } catch (error) {
     console.error("Error fetching rider orders:", error);
     const allOrders = getDynamicOrders();
-    const riderFallbackOrders = allOrders.filter((o: any) => o.rider?._id === DEMO_IDS.RIDER);
+    const riderFallbackOrders = allOrders
+      .filter((o: any) => o.rider?._id === DEMO_IDS.RIDER)
+      .map((o: any) => decryptOrderPayload(o));
     return NextResponse.json(riderFallbackOrders, { status: 200 });
   }
 }

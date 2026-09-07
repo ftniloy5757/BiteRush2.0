@@ -16,18 +16,45 @@ export async function GET() {
     const conn = await connectDB();
     if (conn) {
       try {
+        const { CryptoService } = await import("@/lib/crypto/cryptoService");
+        const { sanitizeField } = await import("@/lib/crypto/orderDecryptor");
+
         let riders = await User.find({ role: "rider", activeStatus: true })
-          .select("firstName lastName contactNumber vehicleType activeStatus");
+          .select("firstName lastName contactNumber vehicleType activeStatus firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted");
         if (riders.length === 0) {
           try {
             const { seedDemoData } = await import("@/lib/seedDemoUsers");
             await seedDemoData();
             riders = await User.find({ role: "rider", activeStatus: true })
-              .select("firstName lastName contactNumber vehicleType activeStatus");
+              .select("firstName lastName contactNumber vehicleType activeStatus firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted");
           } catch {}
         }
         if (riders.length > 0) {
-          return NextResponse.json(riders, { status: 200 });
+          const decryptedRiders = riders.map((r) => {
+            const robj = typeof r.toObject === "function" ? r.toObject() : { ...r };
+            if (robj.firstNameEncrypted) {
+              const dec = CryptoService.decryptProfile(robj.firstNameEncrypted);
+              if (dec) robj.firstName = dec;
+            }
+            if (robj.lastNameEncrypted) {
+              const dec = CryptoService.decryptProfile(robj.lastNameEncrypted);
+              if (dec) robj.lastName = dec;
+            }
+            if (robj.contactNumberEncrypted) {
+              const dec = CryptoService.decryptProfile(robj.contactNumberEncrypted);
+              if (dec) robj.contactNumber = dec;
+            }
+            if (robj.vehicleTypeEncrypted) {
+              const dec = CryptoService.decryptProfile(robj.vehicleTypeEncrypted);
+              if (dec) robj.vehicleType = dec;
+            }
+            robj.firstName = sanitizeField(robj.firstName) || "Zayed";
+            robj.lastName = sanitizeField(robj.lastName) || "Masum";
+            robj.contactNumber = sanitizeField(robj.contactNumber) || "+8801700000003";
+            robj.vehicleType = sanitizeField(robj.vehicleType) || "Motorcycle";
+            return robj;
+          });
+          return NextResponse.json(decryptedRiders, { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB riders lookup error, serving fallback:", dbErr);

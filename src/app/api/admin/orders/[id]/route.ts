@@ -5,6 +5,7 @@ import Order from "@/models/Order";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import connectDB from "@/lib/dbConnect";
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
 
 
 export async function GET(
@@ -29,7 +30,8 @@ export async function GET(
     await connectDB();
     
     const order = await Order.findById(id)
-      .populate("user", "firstName lastName email firstNameEncrypted lastNameEncrypted emailEncrypted");
+      .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+      .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted");
     
     if (!order) {
       return NextResponse.json(
@@ -38,36 +40,7 @@ export async function GET(
       );
     }
 
-    const orderObj = order.toObject();
-
-    // Decrypt shipping address for admin if encrypted
-    if (order.shippingAddressEncrypted) {
-      try {
-        const { CryptoService } = await import("@/lib/crypto/cryptoService");
-        const decryptedJson = CryptoService.decryptOrderField(order.shippingAddressEncrypted);
-        orderObj.shippingAddress = JSON.parse(decryptedJson);
-      } catch {
-        // Fallback
-      }
-    }
-
-    // Decrypt user fields for admin
-    if (orderObj.user) {
-      try {
-        const { CryptoService } = await import("@/lib/crypto/cryptoService");
-        if (orderObj.user.firstNameEncrypted) {
-          orderObj.user.firstName = CryptoService.decryptProfile(orderObj.user.firstNameEncrypted);
-        }
-        if (orderObj.user.lastNameEncrypted) {
-          orderObj.user.lastName = CryptoService.decryptProfile(orderObj.user.lastNameEncrypted);
-        }
-        if (orderObj.user.emailEncrypted) {
-          orderObj.user.email = CryptoService.decryptProfile(orderObj.user.emailEncrypted);
-        }
-      } catch {}
-    }
-    
-    return NextResponse.json(orderObj);
+    return NextResponse.json(decryptOrderPayload(order));
   } catch (error) {
     console.error("Error fetching order:", error);
     return NextResponse.json(
@@ -122,9 +95,10 @@ export async function PATCH(
     }
     
     const updatedOrder = await Order.findById(id)
-      .populate("user", "firstName lastName email");
+      .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+      .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted");
     
-    return NextResponse.json(updatedOrder);
+    return NextResponse.json(decryptOrderPayload(updatedOrder));
   } catch (error) {
     console.error("Error updating order:", error);
     return NextResponse.json(

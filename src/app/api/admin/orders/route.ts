@@ -22,27 +22,14 @@ export async function GET(request: Request) {
 
     await connectDB();
     
-    // Get all orders with basic user info
+    // Get all orders with full decrypted user and rider info
     const rawOrders = await Order.find({})
-      .populate("user", "firstName lastName email firstNameEncrypted lastNameEncrypted emailEncrypted")
+      .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+      .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted")
       .sort({ createdAt: -1 });
 
-    const { CryptoService } = await import("@/lib/crypto/cryptoService");
-    const orders = rawOrders.map((o) => {
-      const obj = o.toObject();
-      if (obj.user) {
-        if (obj.user.firstNameEncrypted) {
-          obj.user.firstName = CryptoService.decryptProfile(obj.user.firstNameEncrypted);
-        }
-        if (obj.user.lastNameEncrypted) {
-          obj.user.lastName = CryptoService.decryptProfile(obj.user.lastNameEncrypted);
-        }
-        if (obj.user.emailEncrypted) {
-          obj.user.email = CryptoService.decryptProfile(obj.user.emailEncrypted);
-        }
-      }
-      return obj;
-    });
+    const { decryptOrderPayload } = await import("@/lib/crypto/orderDecryptor");
+    const orders = rawOrders.map((o) => decryptOrderPayload(o));
     
     return NextResponse.json(orders);
   } catch (error) {

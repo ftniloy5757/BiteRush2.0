@@ -9,36 +9,7 @@ import { DEMO_IDS } from "@/lib/demoData";
 import { getDynamicOrders, addDynamicOrder } from "@/lib/dynamicOrdersStore";
 import { CryptoService } from "@/lib/crypto/cryptoService";
 import { KeyManager } from "@/lib/crypto/keyManager";
-
-// Helper to decrypt order fields for permitted roles
-function decryptOrderFields(orderObj: any, role?: string) {
-  if (!orderObj) return orderObj;
-  const o = typeof orderObj.toObject === "function" ? orderObj.toObject() : { ...orderObj };
-
-  // Decrypt shipping address if ECC encrypted
-  if (o.shippingAddressEncrypted) {
-    try {
-      const decryptedAddrJson = CryptoService.decryptOrderField(o.shippingAddressEncrypted);
-      if (decryptedAddrJson.startsWith("{")) {
-        o.shippingAddress = JSON.parse(decryptedAddrJson);
-      }
-    } catch (err) {
-      console.warn("Failed decrypting order shipping address:", err);
-    }
-  }
-
-  // Decrypt delivery instructions
-  if (o.deliveryInstructionsEncrypted) {
-    o.deliveryInstructions = CryptoService.decryptOrderField(o.deliveryInstructionsEncrypted);
-  }
-
-  // Decrypt review if present
-  if (o.reviewEncrypted) {
-    o.review = CryptoService.decryptReview(o.reviewEncrypted);
-  }
-
-  return o;
-}
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
 
 // GET user orders
 export async function GET(req: NextRequest) {
@@ -62,15 +33,13 @@ export async function GET(req: NextRequest) {
         }
 
         const orders = await Order.find(query)
-          .populate("user", "firstName lastName email contactNumber")
-          .populate("rider", "firstName lastName contactNumber vehicleType")
+          .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+          .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted")
           .sort({ createdAt: -1 })
           .limit(limit);
 
         if (orders.length > 0) {
-          const decryptedOrders = orders.map((ord) =>
-            decryptOrderFields(ord, session.user.role)
-          );
+          const decryptedOrders = orders.map((ord) => decryptOrderPayload(ord));
           return NextResponse.json({ orders: decryptedOrders }, { status: 200 });
         }
       } catch (dbErr) {
@@ -79,7 +48,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Dynamic fallback orders
-    let fallback = getDynamicOrders();
+    let fallback = getDynamicOrders().map((o) => decryptOrderPayload(o));
     if (session.user.role === "customer") {
       fallback = fallback.filter(
         (o) => o.user?._id === session.user.id || o.user?._id === DEMO_IDS.CUSTOMER
@@ -93,7 +62,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ orders: fallback.slice(0, limit) }, { status: 200 });
   } catch (error: any) {
     console.error("Error in orders API, serving fallback:", error);
-    return NextResponse.json({ orders: getDynamicOrders() }, { status: 200 });
+    return NextResponse.json({ orders: getDynamicOrders().map((o) => decryptOrderPayload(o)) }, { status: 200 });
   }
 }
 
@@ -227,7 +196,7 @@ export async function POST(req: NextRequest) {
         });
 
         const createdOrder = await order.save();
-        const decryptedResponse = decryptOrderFields(createdOrder, session.user.role);
+        const decryptedResponse = decryptOrderPayload(createdOrder);
         return NextResponse.json({ order: decryptedResponse }, { status: 201 });
       } catch (dbErr) {
         console.warn("DB save order error, returning dynamic order:", dbErr);

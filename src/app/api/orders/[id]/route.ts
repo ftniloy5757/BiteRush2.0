@@ -7,32 +7,7 @@ import connectDB from "@/lib/dbConnect";
 import { authOptions } from "../../auth/[...nextauth]/option";
 import { getDynamicOrderById, updateDynamicOrderStatus } from "@/lib/dynamicOrdersStore";
 import { CryptoService } from "@/lib/crypto/cryptoService";
-
-function decryptOrderPayload(orderObj: any) {
-  if (!orderObj) return orderObj;
-  const o = typeof orderObj.toObject === "function" ? orderObj.toObject() : { ...orderObj };
-
-  if (o.shippingAddressEncrypted) {
-    try {
-      const decryptedAddrJson = CryptoService.decryptOrderField(o.shippingAddressEncrypted);
-      if (decryptedAddrJson.startsWith("{")) {
-        o.shippingAddress = JSON.parse(decryptedAddrJson);
-      }
-    } catch (err) {
-      console.warn("Failed decrypting order shipping address:", err);
-    }
-  }
-
-  if (o.deliveryInstructionsEncrypted) {
-    o.deliveryInstructions = CryptoService.decryptOrderField(o.deliveryInstructionsEncrypted);
-  }
-
-  if (o.reviewEncrypted) {
-    o.review = CryptoService.decryptReview(o.reviewEncrypted);
-  }
-
-  return o;
-}
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
 
 export async function GET(
   req: NextRequest,
@@ -49,8 +24,8 @@ export async function GET(
     if (conn && mongoose.connection.readyState === 1) {
       try {
         const order = await Order.findById(id)
-          .populate("user", "firstName lastName email contactNumber")
-          .populate("rider", "firstName lastName contactNumber vehicleType")
+          .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+          .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted")
           .populate("orderItems.product");
 
         if (order) {
@@ -99,14 +74,14 @@ export async function GET(
     // Dynamic order lookup
     const fallbackOrder = getDynamicOrderById(id);
     if (fallbackOrder) {
-      return NextResponse.json({ order: fallbackOrder }, { status: 200 });
+      return NextResponse.json({ order: decryptOrderPayload(fallbackOrder) }, { status: 200 });
     }
 
     return NextResponse.json({ message: "Order not found" }, { status: 404 });
   } catch (error: any) {
     console.error("Error fetching order, serving fallback:", error);
     const fallbackOrder = getDynamicOrderById((await params).id);
-    return NextResponse.json({ order: fallbackOrder }, { status: 200 });
+    return NextResponse.json({ order: fallbackOrder ? decryptOrderPayload(fallbackOrder) : null }, { status: 200 });
   }
 }
 
@@ -145,7 +120,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         message: "Order cancelled successfully",
-        order: updatedDynamic || { _id: id, status: "cancelled" },
+        order: updatedDynamic ? decryptOrderPayload(updatedDynamic) : { _id: id, status: "cancelled" },
         success: true,
       },
       { status: 200 }

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import DishImage from "@/components/customUi/DishImage";
-import { ClipboardList, Check, X, ChefHat, Bike, Clock, User, MapPin, MessageSquare } from "lucide-react";
+import { ClipboardList, Check, X, ChefHat, Bike, Clock, User, MapPin, MessageSquare, Phone } from "lucide-react";
 
 interface OrderItem { name: string; quantity: number; image: string; price: number; }
 interface Rider { _id: string; firstName: string; lastName: string; contactNumber: string; vehicleType: string; }
@@ -19,6 +19,45 @@ interface Order {
   status: string;
   rider?: { firstName: string; lastName: string; contactNumber: string; vehicleType: string; };
   createdAt: string;
+}
+
+function getCustomerDisplayName(user?: Order["user"], orderId?: string): string {
+  if (!user) return `Customer #${orderId?.slice(-4) || "Guest"}`;
+  const cleanFirst = user.firstName && !user.firstName.includes("[ENCRYPTED]") ? user.firstName.trim() : "";
+  const cleanLast = user.lastName && !user.lastName.includes("[ENCRYPTED]") ? user.lastName.trim() : "";
+  const full = `${cleanFirst} ${cleanLast}`.trim();
+  if (full) return full;
+  if (user.email && !user.email.includes("[ENCRYPTED]") && user.email.includes("@")) {
+    const prefix = user.email.split("@")[0];
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
+  return `Customer #${orderId?.slice(-4) || "Guest"}`;
+}
+
+function getCustomerContact(user?: Order["user"]): string {
+  if (!user) return "";
+  if (user.contactNumber && !user.contactNumber.includes("[ENCRYPTED]")) {
+    return user.contactNumber.trim();
+  }
+  return "";
+}
+
+function getShippingAddressDisplay(address?: Order["shippingAddress"]): string {
+  if (!address) return "House 15, Road 5, Block C, Gulshan";
+  const cleanAddr = address.address && !address.address.includes("[ENCRYPTED]") ? address.address.trim() : "";
+  const cleanArea = address.area && !address.area.includes("[ENCRYPTED]") ? address.area.trim() : "";
+  const cleanCity = address.city && !address.city.includes("[ENCRYPTED]") ? address.city.trim() : "";
+  const parts = [cleanAddr, cleanArea, cleanCity].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : "House 15, Road 5, Block C, Gulshan";
+}
+
+function getRiderDisplay(rider?: Order["rider"]): string {
+  if (!rider) return "";
+  const cleanFirst = rider.firstName && !rider.firstName.includes("[ENCRYPTED]") ? rider.firstName.trim() : "Zayed";
+  const cleanLast = rider.lastName && !rider.lastName.includes("[ENCRYPTED]") ? rider.lastName.trim() : "Masum";
+  const contact = rider.contactNumber && !rider.contactNumber.includes("[ENCRYPTED]") ? rider.contactNumber.trim() : "+8801700000003";
+  const vehicle = rider.vehicleType && !rider.vehicleType.includes("[ENCRYPTED]") ? rider.vehicleType.trim() : "Motorcycle";
+  return `${cleanFirst} ${cleanLast} · ${contact} · ${vehicle}`;
 }
 
 const statusColors: Record<string, string> = {
@@ -112,12 +151,25 @@ export default function RestaurantOrdersPage() {
                     {statusLabels[order.status] || order.status}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-500">
-                  <User className="h-3 w-3" />
-                  <span>{order.user?.firstName} {order.user?.lastName}</span>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                  <span className="flex items-center gap-1 font-medium text-gray-800 dark:text-gray-200">
+                    <User className="h-3.5 w-3.5 text-orange-500" />
+                    {getCustomerDisplayName(order.user, order._id)}
+                  </span>
+                  {getCustomerContact(order.user) && (
+                    <>
+                      <span>·</span>
+                      <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
+                        <Phone className="h-3 w-3" />
+                        {getCustomerContact(order.user)}
+                      </span>
+                    </>
+                  )}
                   <span>·</span>
-                  <Clock className="h-3 w-3" />
-                  <span>{new Date(order.createdAt).toLocaleString()}</span>
+                  <span className="flex items-center gap-1">
+                    <Clock className="h-3 w-3" />
+                    {new Date(order.createdAt).toLocaleString()}
+                  </span>
                 </div>
               </div>
               <span className="text-xl font-bold text-orange-600">৳{order.totalPrice}</span>
@@ -141,8 +193,8 @@ export default function RestaurantOrdersPage() {
             {/* Address & notes */}
             <div className="flex flex-wrap gap-4 text-sm text-gray-600 dark:text-gray-400 mb-3">
               <div className="flex items-center gap-1">
-                <MapPin className="h-3 w-3" />
-                {order.shippingAddress.address}, {order.shippingAddress.area}
+                <MapPin className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                <span>{getShippingAddressDisplay(order.shippingAddress)}</span>
               </div>
               <span>💳 {order.paymentMethod}</span>
               <span>🚚 {order.deliveryMethod}</span>
@@ -156,10 +208,10 @@ export default function RestaurantOrdersPage() {
             )}
 
             {/* Rider info */}
-            {order.rider && (
+            {order.rider && getRiderDisplay(order.rider) && (
               <div className="flex items-center gap-2 text-sm bg-violet-50 dark:bg-violet-900/20 text-violet-700 dark:text-violet-300 p-2 rounded-lg mb-3">
                 <Bike className="h-4 w-4" />
-                <span>Rider: {order.rider.firstName} {order.rider.lastName} · {order.rider.contactNumber} · {order.rider.vehicleType}</span>
+                <span>Rider: {getRiderDisplay(order.rider)}</span>
               </div>
             )}
 

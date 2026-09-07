@@ -5,6 +5,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/option";
 import Order from "@/models/Order";
 import { DEMO_IDS } from "@/lib/demoData";
 import { getDynamicOrderById, updateDynamicOrderStatus } from "@/lib/dynamicOrdersStore";
+import { decryptOrderPayload } from "@/lib/crypto/orderDecryptor";
 
 // PUT update order status (accept/decline/prepare/assign rider)
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -71,17 +72,17 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           await order.save();
 
           const updated = await Order.findById(id)
-            .populate("user", "firstName lastName email contactNumber")
-            .populate("rider", "firstName lastName contactNumber vehicleType");
+            .populate("user", "firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted")
+            .populate("rider", "firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted");
 
-          return NextResponse.json(updated, { status: 200 });
+          return NextResponse.json(decryptOrderPayload(updated), { status: 200 });
         }
       } catch (dbErr) {
         console.warn("DB update order error, using dynamic store:", dbErr);
       }
     }
 
-    return NextResponse.json(dynamicUpdated || { _id: id, status: newStatus }, { status: 200 });
+    return NextResponse.json(decryptOrderPayload(dynamicUpdated) || { _id: id, status: newStatus }, { status: 200 });
   } catch (error: any) {
     console.error("Error updating order:", error);
     return NextResponse.json({ message: error.message || "Error updating order" }, { status: 500 });

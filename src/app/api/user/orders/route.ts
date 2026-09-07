@@ -29,13 +29,18 @@ export async function GET(req: NextRequest) {
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit)
-      .populate('orderItems.product', 'name image');
+      .populate('orderItems.product', 'name image')
+      .populate('user', 'firstName lastName email contactNumber firstNameEncrypted lastNameEncrypted emailEncrypted contactNumberEncrypted')
+      .populate('rider', 'firstName lastName contactNumber vehicleType firstNameEncrypted lastNameEncrypted contactNumberEncrypted vehicleTypeEncrypted');
+
+    const { decryptOrderPayload } = await import('@/lib/crypto/orderDecryptor');
+    const decryptedOrders = orders.map((o) => decryptOrderPayload(o));
 
     // Get total count for pagination
     const totalOrders = await Order.countDocuments({ user: session.user.id });
 
     return NextResponse.json({
-      orders,
+      orders: decryptedOrders,
       page,
       pages: Math.ceil(totalOrders / limit),
       totalOrders

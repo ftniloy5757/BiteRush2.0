@@ -49,7 +49,7 @@ export class CryptoService {
       const version = this.extractVersion(ciphertext);
       const privKey = KeyManager.getRSAPrivateKey(version);
       const decrypted = rsaDecrypt(ciphertext, privKey);
-      if (decrypted && !decrypted.startsWith("{") && !decrypted.includes("RSA")) {
+      if (decrypted && !decrypted.includes("RSA-1024") && !decrypted.includes('"blocks":')) {
         return decrypted;
       }
       return "";
@@ -79,7 +79,7 @@ export class CryptoService {
       const version = this.extractVersion(ciphertext);
       const privKey = KeyManager.getECCPrivateKey(version);
       const decrypted = eccDecrypt(ciphertext, privKey);
-      if (decrypted && !decrypted.startsWith("{") && !decrypted.includes("ECC")) {
+      if (decrypted && !decrypted.includes("ECC-SECP256K1") && !decrypted.includes('"blocks":')) {
         return decrypted;
       }
       return "";
