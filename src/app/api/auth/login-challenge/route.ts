@@ -88,10 +88,11 @@ export async function POST(req: NextRequest) {
             // Generate 6-digit OTP using custom HMAC-SHA256
             const { otp, expiresAt } = CryptoService.generateOTP();
 
-            // Store OTP on user record for verification
-            user.twoFactorOtp = otp;
-            user.twoFactorOtpExpiresAt = expiresAt;
-            await user.save();
+            // Store OTP on user record for verification atomically
+            await User.updateOne(
+              { _id: user._id },
+              { $set: { twoFactorOtp: otp, twoFactorOtpExpiresAt: expiresAt } }
+            );
 
             userId = user._id.toString();
 
@@ -147,6 +148,48 @@ export async function POST(req: NextRequest) {
           twoFactorOtp: otp,
           twoFactorOtpExpiresAt: expiresAt,
         });
+
+        // Ensure this user is persisted into MongoDB Atlas so they become permanent
+        try {
+          await connectDB();
+          const existingInDb = await User.findOne({
+            $or: [{ emailLookupHmac }, { email: normalizedEmail }],
+          });
+          if (!existingInDb) {
+            const newUser = new User({
+              firstName: "[ENCRYPTED]",
+              lastName: "[ENCRYPTED]",
+              email: "[ENCRYPTED]",
+              contactNumber: "[ENCRYPTED]",
+              role: dynamicUser.role || "customer",
+              passwordHash: dynamicUser.passwordHash,
+              firstNameEncrypted: dynamicUser.firstNameEncrypted,
+              lastNameEncrypted: dynamicUser.lastNameEncrypted,
+              emailEncrypted: dynamicUser.emailEncrypted,
+              contactNumberEncrypted: dynamicUser.contactNumberEncrypted,
+              restaurantNameEncrypted: dynamicUser.restaurantNameEncrypted,
+              restaurantAddressEncrypted: dynamicUser.restaurantAddressEncrypted,
+              vehicleTypeEncrypted: dynamicUser.vehicleTypeEncrypted,
+              emailLookupHmac,
+              contactNumberLookupHmac: dynamicUser.contactNumberLookupHmac,
+              twoFactorOtp: otp,
+              twoFactorOtpExpiresAt: expiresAt,
+              isEmailVerified: true,
+              isTwoFactorEnabled: true,
+              isTwoFactorVerified: false,
+              cryptoVersion: 1,
+              integrityMac: dynamicUser.integrityMac,
+            });
+            await newUser.save();
+          } else {
+            await User.updateOne(
+              { _id: existingInDb._id },
+              { $set: { twoFactorOtp: otp, twoFactorOtpExpiresAt: expiresAt } }
+            );
+          }
+        } catch (syncErr) {
+          console.warn("Sync dynamic user to MongoDB notice:", syncErr);
+        }
 
         const [local, domain] = normalizedEmail.split("@");
         const maskedEmail = `${local.slice(0, 2)}***@${domain}`;

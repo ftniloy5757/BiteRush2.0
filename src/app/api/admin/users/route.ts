@@ -31,32 +31,36 @@ export async function GET(req: NextRequest) {
     const search = url.searchParams.get("search") || "";
     const role = url.searchParams.get("role") || "";
 
-    // Build query
-    const query: any = {};
-
-    // Add search functionality
-    if (search) {
-      query.$or = [
-        { firstName: { $regex: search, $options: "i" } },
-        { lastName: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
-      ];
-    }
-
-    // Filter by role if provided
+    // Build query for role filtering
+    const roleQuery: any = {};
     if (role && ["customer", "user", "admin", "rider", "restaurant"].includes(role)) {
-      query.role = role === "user" ? "customer" : role;
+      if (role === "customer" || role === "user") {
+        roleQuery.role = { $in: ["customer", "user"] };
+      } else {
+        roleQuery.role = role;
+      }
     }
 
     // Calculate pagination
     const skip = (page - 1) * limit;
 
-    // Execute query
-    const rawUsers = await User.find(query)
-      .select("-passwordHash -phoneOtp -emailOtp -resetToken")
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    let rawUsers: any[] = [];
+    let totalCount = 0;
+
+    if (search) {
+      // When searching, fetch users matching the role and filter across decrypted fields
+      const candidates = await User.find(roleQuery)
+        .select("-passwordHash -phoneOtp -emailOtp -resetToken")
+        .sort({ createdAt: -1 });
+      rawUsers = candidates;
+    } else {
+      totalCount = await User.countDocuments(roleQuery);
+      rawUsers = await User.find(roleQuery)
+        .select("-passwordHash -phoneOtp -emailOtp -resetToken")
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    }
 
     // Decrypt RSA fields for admin
     const { CryptoService } = await import("@/lib/crypto/cryptoService");
@@ -138,16 +142,59 @@ export async function GET(req: NextRequest) {
       return obj;
     });
 
-    // Get total count for pagination
-    const total = await User.countDocuments(query);
+    // Merge in-memory registered dynamic users if they are not already in MongoDB
+    try {
+      const { getDynamicUsers } = await import("@/lib/dynamicUsersStore");
+      const dynamicUsers = getDynamicUsers();
+      for (const dyn of dynamicUsers) {
+        const exists = users.some((u: any) => String(u._id) === String(dyn._id) || String(u.id) === String(dyn._id));
+        if (!exists) {
+          users.unshift({
+            _id: dyn._id,
+            id: dyn._id,
+            firstName: dyn.firstName || "Customer",
+            lastName: dyn.lastName || "",
+            email: dyn.email || "",
+            contactNumber: dyn.contactNumber || "",
+            role: dyn.role || "customer",
+            status: "Online",
+            isEmailVerified: dyn.isEmailVerified !== false,
+            isPhoneVerified: false,
+            createdAt: dyn.createdAt || new Date().toISOString(),
+            updatedAt: dyn.updatedAt || new Date().toISOString(),
+          });
+        }
+      }
+    } catch {}
+
+    let finalUsers = users;
+
+    if (search) {
+      const searchLower = search.trim().toLowerCase();
+      finalUsers = users.filter((u: any) => {
+        return (
+          (u.firstName && u.firstName.toLowerCase().includes(searchLower)) ||
+          (u.lastName && u.lastName.toLowerCase().includes(searchLower)) ||
+          (u.email && u.email.toLowerCase().includes(searchLower)) ||
+          (u.contactNumber && u.contactNumber.toLowerCase().includes(searchLower)) ||
+          (u.restaurantName && u.restaurantName.toLowerCase().includes(searchLower)) ||
+          (u.vehicleType && u.vehicleType.toLowerCase().includes(searchLower)) ||
+          (u.role && u.role.toLowerCase().includes(searchLower))
+        );
+      });
+      totalCount = finalUsers.length;
+      finalUsers = finalUsers.slice(skip, skip + limit);
+    } else {
+      totalCount = Math.max(totalCount, users.length);
+    }
 
     return NextResponse.json({
-      users,
+      users: finalUsers,
       pagination: {
-        total,
+        total: totalCount,
         page,
         limit,
-        pages: Math.ceil(total / limit),
+        pages: Math.ceil(totalCount / limit) || 1,
       },
     });
   } catch (error: any) {

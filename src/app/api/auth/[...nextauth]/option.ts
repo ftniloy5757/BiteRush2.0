@@ -1,6 +1,7 @@
 import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import bcrypt from "bcryptjs";
+import mongoose from "mongoose";
 import User from "@/models/User";
 import connectDB from "@/lib/dbConnect";
 import { DEMO_USERS } from "@/lib/demoData";
@@ -98,11 +99,14 @@ export const authOptions: NextAuthOptions = {
                     return null; // Reject: invalid or expired OTP
                   }
 
-                  // Clear OTP to prevent replay attacks
-                  user.twoFactorOtp = undefined;
-                  user.twoFactorOtpExpiresAt = undefined;
-                  user.isTwoFactorVerified = true;
-                  await user.save();
+                  // Clear OTP to prevent replay attacks atomically
+                  await User.updateOne(
+                    { _id: user._id },
+                    {
+                      $unset: { twoFactorOtp: 1, twoFactorOtpExpiresAt: 1 },
+                      $set: { isTwoFactorVerified: true },
+                    }
+                  );
 
                   // Transparently decrypt RSA-encrypted profile fields for the active session
                   const decryptedFirstName = user.firstNameEncrypted
@@ -165,6 +169,41 @@ export const authOptions: NextAuthOptions = {
                   );
 
                 if (isOtpValid) {
+                  // Ensure this user is persisted into MongoDB Atlas so they become permanent
+                  try {
+                    await connectDB();
+                    const existingInDb = await User.findOne({
+                      $or: [{ emailLookupHmac: dynamicUser.emailLookupHmac }, { email: normalizedEmail }],
+                    });
+                    if (!existingInDb) {
+                      const newUser = new User({
+                        firstName: "[ENCRYPTED]",
+                        lastName: "[ENCRYPTED]",
+                        email: "[ENCRYPTED]",
+                        contactNumber: "[ENCRYPTED]",
+                        role: dynamicUser.role || "customer",
+                        passwordHash: dynamicUser.passwordHash,
+                        firstNameEncrypted: dynamicUser.firstNameEncrypted,
+                        lastNameEncrypted: dynamicUser.lastNameEncrypted,
+                        emailEncrypted: dynamicUser.emailEncrypted,
+                        contactNumberEncrypted: dynamicUser.contactNumberEncrypted,
+                        restaurantNameEncrypted: dynamicUser.restaurantNameEncrypted,
+                        restaurantAddressEncrypted: dynamicUser.restaurantAddressEncrypted,
+                        vehicleTypeEncrypted: dynamicUser.vehicleTypeEncrypted,
+                        emailLookupHmac: dynamicUser.emailLookupHmac,
+                        contactNumberLookupHmac: dynamicUser.contactNumberLookupHmac,
+                        isEmailVerified: true,
+                        isTwoFactorEnabled: true,
+                        isTwoFactorVerified: true,
+                        cryptoVersion: 1,
+                        integrityMac: dynamicUser.integrityMac,
+                      });
+                      await newUser.save();
+                    }
+                  } catch (syncErr) {
+                    console.warn("Sync dynamic user to MongoDB notice:", syncErr);
+                  }
+
                   return {
                     id: dynamicUser._id,
                     firstName: dynamicUser.firstName || "Customer",

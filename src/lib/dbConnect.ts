@@ -19,51 +19,39 @@ if (!global.mongooseCache) {
   global.mongooseCache = cached;
 }
 
-export const connectDB = async () => {
+export const connectDB = async (): Promise<typeof mongoose> => {
   const envUri = process.env.MONGODB_URI;
   const uri =
     envUri && !envUri.includes("<username>") && !envUri.includes("<password>")
       ? envUri
       : DEFAULT_MONGODB_URI;
 
-  mongoose.set("bufferCommands", false);
-
   if (cached.conn && mongoose.connection.readyState === 1) {
     return cached.conn;
+  }
+
+  // If connection was disconnected or closed, reset cache
+  if (mongoose.connection.readyState === 0 || mongoose.connection.readyState === 3) {
+    cached.promise = null;
+    cached.conn = null;
   }
 
   if (!cached.promise) {
     cached.promise = mongoose
       .connect(uri, {
-        bufferCommands: false,
-        serverSelectionTimeoutMS: 8000,
-        connectTimeoutMS: 8000,
+        serverSelectionTimeoutMS: 10000,
+        connectTimeoutMS: 10000,
+        maxPoolSize: 10,
       })
-      .then(async (mongooseInstance) => {
+      .then((mongooseInstance) => {
         cached.conn = mongooseInstance;
-        // Clean up legacy unique indexes on users collection that clash with [ENCRYPTED] placeholders
-        try {
-          const col = mongooseInstance.connection.db?.collection("users");
-          if (col) {
-            const indexes = await col.indexes();
-            for (const idx of indexes) {
-              if (
-                (idx.name === "contactNumber_1" && idx.unique) ||
-                (idx.name === "email_1" && idx.unique)
-              ) {
-                await col.dropIndex(idx.name).catch(() => {});
-              }
-            }
-          }
-        } catch {
-          // Ignore index cleanup errors
-        }
         return mongooseInstance;
       })
       .catch((err) => {
         cached.promise = null;
-        console.warn("MongoDB connection notice:", err?.message || err);
-        return null;
+        cached.conn = null;
+        console.error("MongoDB connection notice:", err?.message || err);
+        throw err;
       });
   }
 
@@ -71,10 +59,11 @@ export const connectDB = async () => {
     cached.conn = await cached.promise;
   } catch (e) {
     cached.promise = null;
-    return null;
+    cached.conn = null;
+    throw e;
   }
 
-  return cached.conn;
+  return cached.conn || mongoose;
 };
 
 export default connectDB;

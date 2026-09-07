@@ -4,8 +4,10 @@ import axios from "axios";
 import User from "@/models/User"; // Using your Mongoose User model
 import connectDB from "@/lib/dbConnect";
 
+import mongoose from "mongoose";
+
 export async function POST(request: NextRequest) {
-  const { type, email, phone } = await request.json();
+  const { type, email, phone, userId } = await request.json();
 
   try {
     await connectDB();
@@ -14,21 +16,30 @@ export async function POST(request: NextRequest) {
 
     if (type === "email") {
       const { otp: emailOtp, expiresAt: emailOtpExpiresAt } = CryptoService.generateOTP();
-      const normEmail = (email || "").toLowerCase().trim();
-      const emailLookupHmac = CryptoService.createEmailLookupHmac(normEmail);
+      let user = null;
 
-      // Find user by lookup HMAC or email
-      const user = await User.findOne({
-        $or: [{ emailLookupHmac }, { email: normEmail }],
-      });
+      if (userId && mongoose.Types.ObjectId.isValid(userId)) {
+        user = await User.findById(userId);
+      }
+
+      if (!user) {
+        const targetEmail = (email || userId || "").toLowerCase().trim();
+        if (targetEmail && targetEmail.includes("@")) {
+          const emailLookupHmac = CryptoService.createEmailLookupHmac(targetEmail);
+          user = await User.findOne({
+            $or: [{ emailLookupHmac }, { email: targetEmail }],
+          });
+        }
+      }
 
       if (!user) {
         return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
       }
 
-      user.emailOtp = emailOtp;
-      user.emailOtpExpiresAt = emailOtpExpiresAt;
-      await user.save();
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { emailOtp, emailOtpExpiresAt } }
+      );
 
       const recipientEmail = user.emailEncrypted
         ? CryptoService.decryptProfile(user.emailEncrypted)
@@ -71,10 +82,11 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Update the user with the new phone OTP
-      user.phoneOtp = phoneOtp;
-      user.phoneOtpExpiresAt = phoneOtpExpiresAt;
-      await user.save();
+      // Update the user with the new phone OTP atomically
+      await User.updateOne(
+        { _id: user._id },
+        { $set: { phoneOtp, phoneOtpExpiresAt } }
+      );
 
       const apiKey = process.env.SMS_API_KEY;
       const senderId = process.env.SMS_SENDER_ID;

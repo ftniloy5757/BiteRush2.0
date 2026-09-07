@@ -76,105 +76,67 @@ export const POST = async (request: Request) => {
 
   let createdUserId: string | undefined = undefined;
 
-  // 6. Attempt primary save in MongoDB
+  // 6. Primary save in MongoDB
   try {
-    const conn = await connectDB();
-    if (conn && mongoose.connection.readyState === 1) {
-      // Check if user already exists in DB
-      const existingUser = await User.findOne({
-        $or: [
-          { emailLookupHmac },
-          { email: normalizedEmail },
-          ...(contactNumberLookupHmac ? [{ contactNumberLookupHmac }] : []),
-        ],
-      });
+    await connectDB();
 
-      if (existingUser) {
-        return new Response(
-          JSON.stringify({ success: false, message: "Email or phone number already in use" }),
-          { status: 409 }
-        );
-      }
+    // Check if user already exists in DB
+    const existingUser = await User.findOne({
+      $or: [
+        { emailLookupHmac },
+        { email: normalizedEmail },
+        ...(contactNumberLookupHmac ? [{ contactNumberLookupHmac }] : []),
+      ],
+    });
 
-      const newUser = new User({
-        firstName: "[ENCRYPTED]",
-        lastName: "[ENCRYPTED]",
-        email: "[ENCRYPTED]",
-        contactNumber: "[ENCRYPTED]",
-        role: role || "customer",
-        passwordHash,
-        restaurantName: restaurantName ? "[ENCRYPTED]" : undefined,
-        restaurantAddress: restaurantAddress ? "[ENCRYPTED]" : undefined,
-        vehicleType: vehicleType ? "[ENCRYPTED]" : undefined,
-
-        firstNameEncrypted,
-        lastNameEncrypted,
-        emailEncrypted,
-        contactNumberEncrypted,
-        restaurantNameEncrypted,
-        restaurantAddressEncrypted,
-        vehicleTypeEncrypted,
-
-        emailLookupHmac,
-        contactNumberLookupHmac,
-
-        emailOtp,
-        emailOtpExpiresAt,
-        isEmailVerified: false,
-        isTwoFactorEnabled: true,
-        isTwoFactorVerified: false,
-
-        cryptoVersion: KeyManager.getActiveVersion(),
-        integrityMac,
-      });
-
-      await newUser.save();
-      createdUserId = newUser._id.toString();
-
-      // Mirror to dynamic store for fast fallback
-      addDynamicUser({
-        _id: createdUserId,
-        id: createdUserId,
-        firstName,
-        lastName,
-        email: normalizedEmail,
-        contactNumber,
-        role: role || "customer",
-        passwordHash,
-        restaurantName,
-        restaurantAddress,
-        vehicleType,
-        firstNameEncrypted,
-        lastNameEncrypted,
-        emailEncrypted,
-        contactNumberEncrypted,
-        emailLookupHmac,
-        contactNumberLookupHmac,
-        emailOtp,
-        emailOtpExpiresAt,
-        isEmailVerified: false,
-        isTwoFactorEnabled: true,
-        isTwoFactorVerified: false,
-        integrityMac,
-      });
-    }
-  } catch (dbErr) {
-    console.warn("MongoDB registration notice (falling back to dynamic user store):", dbErr);
-  }
-
-  // 7. Resilient fallback: If DB was offline or couldn't complete save, use dynamic store
-  if (!createdUserId) {
-    const existingDynamic = findDynamicUserByEmail(normalizedEmail);
-    if (existingDynamic) {
+    if (existingUser) {
       return new Response(
-        JSON.stringify({ success: false, message: "Email already in use" }),
+        JSON.stringify({ success: false, message: "Email or phone number already in use" }),
         { status: 409 }
       );
     }
 
-    const dynamicUser = addDynamicUser({
-      firstName: firstName || "Customer",
-      lastName: lastName || "",
+    const newUser = new User({
+      firstName: "[ENCRYPTED]",
+      lastName: "[ENCRYPTED]",
+      email: "[ENCRYPTED]",
+      contactNumber: "[ENCRYPTED]",
+      role: role || "customer",
+      passwordHash,
+      restaurantName: restaurantName ? "[ENCRYPTED]" : undefined,
+      restaurantAddress: restaurantAddress ? "[ENCRYPTED]" : undefined,
+      vehicleType: vehicleType ? "[ENCRYPTED]" : undefined,
+
+      firstNameEncrypted,
+      lastNameEncrypted,
+      emailEncrypted,
+      contactNumberEncrypted,
+      restaurantNameEncrypted,
+      restaurantAddressEncrypted,
+      vehicleTypeEncrypted,
+
+      emailLookupHmac,
+      contactNumberLookupHmac,
+
+      emailOtp,
+      emailOtpExpiresAt,
+      isEmailVerified: false,
+      isTwoFactorEnabled: true,
+      isTwoFactorVerified: false,
+
+      cryptoVersion: KeyManager.getActiveVersion(),
+      integrityMac,
+    });
+
+    await newUser.save();
+    createdUserId = newUser._id.toString();
+
+    // Mirror to dynamic store for in-session caching
+    addDynamicUser({
+      _id: createdUserId,
+      id: createdUserId,
+      firstName,
+      lastName,
       email: normalizedEmail,
       contactNumber,
       role: role || "customer",
@@ -195,8 +157,18 @@ export const POST = async (request: Request) => {
       isTwoFactorVerified: false,
       integrityMac,
     });
-
-    createdUserId = dynamicUser._id;
+  } catch (dbErr: any) {
+    console.error("MongoDB registration error:", dbErr);
+    return new Response(
+      JSON.stringify({
+        success: false,
+        message:
+          dbErr?.code === 11000 || dbErr?.message?.includes("E11000")
+            ? "Email or phone number already registered."
+            : "Database registration error. Please try again.",
+      }),
+      { status: 500 }
+    );
   }
 
   // 8. Attempt sending verification email

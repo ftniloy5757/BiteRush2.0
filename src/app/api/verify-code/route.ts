@@ -20,10 +20,19 @@ export const POST = async (request: Request) => {
     let userVerified = false;
 
     try {
-      const conn = await connectDB();
-      if (conn && mongoose.connection.readyState === 1 && mongoose.Types.ObjectId.isValid(userId)) {
-        const user = await User.findById(userId);
-        if (user) {
+      await connectDB();
+      let user = null;
+      if (mongoose.Types.ObjectId.isValid(userId)) {
+        user = await User.findById(userId);
+      }
+      if (!user && userId) {
+        const searchEmail = String(userId).toLowerCase().trim();
+        const hmac = CryptoService.createEmailLookupHmac(searchEmail);
+        user = await User.findOne({
+          $or: [{ emailLookupHmac: hmac }, { email: searchEmail }],
+        });
+      }
+      if (user) {
           const userEmail = (
             user.email === "[ENCRYPTED]" && user.emailEncrypted
               ? CryptoService.decryptProfile(user.emailEncrypted)
@@ -46,16 +55,20 @@ export const POST = async (request: Request) => {
             );
           }
 
-          user.isEmailVerified = true;
-          user.isTwoFactorVerified = true;
-          user.emailOtp = undefined;
-          user.emailOtpExpiresAt = undefined;
-          user.twoFactorOtp = undefined;
-          user.twoFactorOtpExpiresAt = undefined;
-          await user.save();
+          await User.updateOne(
+            { _id: user._id },
+            {
+              $set: { isEmailVerified: true, isTwoFactorVerified: true },
+              $unset: {
+                emailOtp: 1,
+                emailOtpExpiresAt: 1,
+                twoFactorOtp: 1,
+                twoFactorOtpExpiresAt: 1,
+              },
+            }
+          );
           userVerified = true;
         }
-      }
     } catch (dbErr) {
       console.warn("DB verify-code check error, falling back to dynamic store:", dbErr);
     }
@@ -86,6 +99,48 @@ export const POST = async (request: Request) => {
           emailOtp: undefined,
           twoFactorOtp: undefined,
         });
+
+        // Ensure verified user is persisted in MongoDB
+        try {
+          await connectDB();
+          const emailLookupHmac = CryptoService.createEmailLookupHmac(userEmail);
+          const existingInDb = await User.findOne({
+            $or: [{ emailLookupHmac }, { email: userEmail }],
+          });
+          if (!existingInDb) {
+            const newUser = new User({
+              firstName: "[ENCRYPTED]",
+              lastName: "[ENCRYPTED]",
+              email: "[ENCRYPTED]",
+              contactNumber: "[ENCRYPTED]",
+              role: dynamicUser.role || "customer",
+              passwordHash: dynamicUser.passwordHash,
+              firstNameEncrypted: dynamicUser.firstNameEncrypted,
+              lastNameEncrypted: dynamicUser.lastNameEncrypted,
+              emailEncrypted: dynamicUser.emailEncrypted,
+              contactNumberEncrypted: dynamicUser.contactNumberEncrypted,
+              restaurantNameEncrypted: dynamicUser.restaurantNameEncrypted,
+              restaurantAddressEncrypted: dynamicUser.restaurantAddressEncrypted,
+              vehicleTypeEncrypted: dynamicUser.vehicleTypeEncrypted,
+              emailLookupHmac,
+              contactNumberLookupHmac: dynamicUser.contactNumberLookupHmac,
+              isEmailVerified: true,
+              isTwoFactorEnabled: true,
+              isTwoFactorVerified: true,
+              cryptoVersion: 1,
+              integrityMac: dynamicUser.integrityMac,
+            });
+            await newUser.save();
+          } else {
+            await User.updateOne(
+              { _id: existingInDb._id },
+              { $set: { isEmailVerified: true, isTwoFactorVerified: true } }
+            );
+          }
+        } catch (e) {
+          console.warn("Sync verified user to MongoDB notice:", e);
+        }
+
         userVerified = true;
       }
     }
