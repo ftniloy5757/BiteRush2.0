@@ -26,18 +26,8 @@ export async function GET() {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Decrypt RSA encrypted fields
-    const u = user.toObject();
-    if (u.firstNameEncrypted) u.firstName = CryptoService.decryptProfile(u.firstNameEncrypted);
-    if (u.lastNameEncrypted) u.lastName = CryptoService.decryptProfile(u.lastNameEncrypted);
-    if (u.emailEncrypted) u.email = CryptoService.decryptProfile(u.emailEncrypted);
-    if (u.contactNumberEncrypted) u.contactNumber = CryptoService.decryptProfile(u.contactNumberEncrypted);
-    if (u.bioEncrypted) u.bio = CryptoService.decryptProfile(u.bioEncrypted);
-    if (u.restaurantNameEncrypted) u.restaurantName = CryptoService.decryptProfile(u.restaurantNameEncrypted);
-    if (u.restaurantAddressEncrypted) u.restaurantAddress = CryptoService.decryptProfile(u.restaurantAddressEncrypted);
-    if (u.vehicleTypeEncrypted) u.vehicleType = CryptoService.decryptProfile(u.vehicleTypeEncrypted);
-
-    return NextResponse.json({ user: u });
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+    return NextResponse.json({ user: decryptUserPayload(user) });
   } catch (error) {
     console.error("Error fetching user profile:", error);
     return NextResponse.json(
@@ -158,9 +148,10 @@ export async function PUT(request: Request) {
           ).select("-passwordHash -resetToken -resetTokenExpiry -emailOtp -phoneOtp -twoFactorOtp");
 
           if (updatedUser) {
+            const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
             return NextResponse.json({
               message: "Profile updated successfully",
-              user: updatedUser,
+              user: decryptUserPayload(updatedUser),
             });
           }
         }
@@ -221,9 +212,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
     return NextResponse.json({
       message: "Profile picture updated successfully",
-      user: updatedUser,
+      user: decryptUserPayload(updatedUser),
     });
   } catch (error) {
     console.error("Error updating profile picture:", error);

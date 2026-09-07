@@ -25,6 +25,40 @@ interface Order {
   deliveredAt?: string;
 }
 
+function cleanString(val?: string | null): string {
+  if (!val || typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.includes("RSA-1024") ||
+    trimmed.includes("ECC-SECP256K1") ||
+    trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+    trimmed === "undefined" ||
+    trimmed === "null"
+  ) {
+    return "";
+  }
+  return trimmed;
+}
+
+function getCustomerDisplayName(user: any, orderId?: string): string {
+  if (!user) return `Customer #${(orderId || "").slice(-4) || "Guest"}`;
+  const fn = cleanString(user.firstName);
+  const ln = cleanString(user.lastName);
+  if (fn || ln) return `${fn} ${ln}`.trim();
+  const em = cleanString(user.email);
+  if (em && em.includes("@")) {
+    const prefix = em.split("@")[0];
+    return prefix.charAt(0).toUpperCase() + prefix.slice(1);
+  }
+  return `Customer #${(orderId || "").slice(-4) || "Guest"}`;
+}
+
+function getCustomerContact(user: any): string {
+  if (!user) return "";
+  return cleanString(user.contactNumber);
+}
+
 function RiderDeliveriesContent() {
   const searchParams = useSearchParams();
   const [orders, setOrders] = useState<Order[]>([]);
@@ -119,11 +153,11 @@ function RiderDeliveriesContent() {
                   <span className="font-bold text-lg">#{order._id.slice(-6).toUpperCase()}</span>
                   <div className="flex items-center gap-2 text-sm text-gray-500 mt-1">
                     <User className="h-3 w-3" />
-                    <span>{order.user.firstName} {order.user.lastName}</span>
-                    {order.user.contactNumber && (
+                    <span>{getCustomerDisplayName(order.user, order._id)}</span>
+                    {getCustomerContact(order.user) && (
                       <>
                         <Phone className="h-3 w-3" />
-                        <span>{order.user.contactNumber}</span>
+                        <span>{getCustomerContact(order.user)}</span>
                       </>
                     )}
                   </div>

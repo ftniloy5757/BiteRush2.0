@@ -131,56 +131,34 @@ export async function GET() {
       CryptoService.verifyIntegrityMac(integrityPayload, u.integrityMac);
     }
 
-    // Decrypt RSA encrypted fields if present
-    const firstName = u.firstNameEncrypted
-      ? CryptoService.decryptProfile(u.firstNameEncrypted)
-      : u.firstName;
-    const lastName = u.lastNameEncrypted
-      ? CryptoService.decryptProfile(u.lastNameEncrypted)
-      : u.lastName;
-    const email = u.emailEncrypted
-      ? CryptoService.decryptProfile(u.emailEncrypted)
-      : u.email;
-    const contactNumber = u.contactNumberEncrypted
-      ? CryptoService.decryptProfile(u.contactNumberEncrypted)
-      : u.contactNumber || session.user.contactNumber || (isDemoCustomer ? "+8801740734780" : "");
-    const bio = u.bioEncrypted
-      ? CryptoService.decryptProfile(u.bioEncrypted)
-      : u.bio || (isDemoCustomer ? "Food enthusiast & loyal BiteRush customer." : "");
-    const restaurantName = u.restaurantNameEncrypted
-      ? CryptoService.decryptProfile(u.restaurantNameEncrypted)
-      : u.restaurantName || null;
-    const restaurantAddress = u.restaurantAddressEncrypted
-      ? CryptoService.decryptProfile(u.restaurantAddressEncrypted)
-      : u.restaurantAddress || null;
-    const vehicleType = u.vehicleTypeEncrypted
-      ? CryptoService.decryptProfile(u.vehicleTypeEncrypted)
-      : u.vehicleType || null;
+    // Decrypt RSA encrypted fields with universal user decryptor
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+    const decrypted = decryptUserPayload(u);
 
     const userProfile = {
-      id: u._id?.toString() || userId,
-      firstName: firstName || session.user.firstName || "Customer",
-      lastName: lastName || session.user.lastName || "",
-      email: email || session.user.email || "",
-      contactNumber,
-      bio,
-      restaurantName,
-      restaurantAddress,
-      vehicleType,
-      role: u.role || session.user.role || "customer",
-      profilePicture: u.profilePicture || session.user.profilePicture || null,
-      themePreference: u.themePreference || "light",
-      status: u.status || "Online",
-      isPhoneVerified: u.isPhoneVerified !== false,
-      isEmailVerified: u.isEmailVerified !== false,
-      isTwoFactorEnabled: u.isTwoFactorEnabled !== false,
+      id: decrypted._id?.toString() || userId,
+      firstName: decrypted.firstName || session.user.firstName || "Customer",
+      lastName: decrypted.lastName || session.user.lastName || "",
+      email: decrypted.email || session.user.email || "",
+      contactNumber: decrypted.contactNumber || session.user.contactNumber || (isDemoCustomer ? "+8801740734780" : ""),
+      bio: decrypted.bio || (isDemoCustomer ? "Food enthusiast & loyal BiteRush customer." : ""),
+      restaurantName: decrypted.restaurantName || session.user.restaurantName || null,
+      restaurantAddress: decrypted.restaurantAddress || null,
+      vehicleType: decrypted.vehicleType || session.user.vehicleType || null,
+      role: decrypted.role || session.user.role || "customer",
+      profilePicture: decrypted.profilePicture || session.user.profilePicture || null,
+      themePreference: decrypted.themePreference || "light",
+      status: decrypted.status || "Online",
+      isPhoneVerified: decrypted.isPhoneVerified !== false,
+      isEmailVerified: decrypted.isEmailVerified !== false,
+      isTwoFactorEnabled: decrypted.isTwoFactorEnabled !== false,
       savedAddresses:
-        u.savedAddresses && u.savedAddresses.length > 0
-          ? u.savedAddresses
+        Array.isArray(decrypted.savedAddresses) && decrypted.savedAddresses.length > 0
+          ? decrypted.savedAddresses
           : (isDemoCustomer ? DEFAULT_ADDRESSES : []),
-      createdAt: u.createdAt ? new Date(u.createdAt).toISOString() : new Date().toISOString(),
-      updatedAt: u.updatedAt ? new Date(u.updatedAt).toISOString() : new Date().toISOString(),
-      cryptoVersion: u.cryptoVersion || 1,
+      createdAt: decrypted.createdAt ? new Date(decrypted.createdAt).toISOString() : new Date().toISOString(),
+      updatedAt: decrypted.updatedAt ? new Date(decrypted.updatedAt).toISOString() : new Date().toISOString(),
+      cryptoVersion: decrypted.cryptoVersion || 1,
       integrityVerified: true,
     };
 

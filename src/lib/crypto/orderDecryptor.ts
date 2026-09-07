@@ -22,6 +22,117 @@ export function sanitizeField(val: any): string {
 }
 
 /**
+ * Transparently decrypts all encrypted fields in a User payload for authorized views:
+ * - Names, email, contact number, bio, restaurant name, restaurant address, vehicle type (RSA)
+ * - Sanitizes raw ciphertext envelopes and placeholder "[ENCRYPTED]" strings
+ * - Fills in clean fallbacks from dynamic store or email prefix
+ */
+export function decryptUserPayload(userDoc: any): any {
+  if (!userDoc) return userDoc;
+  const u = typeof userDoc.toObject === "function" ? userDoc.toObject() : { ...userDoc };
+
+  if (u.firstNameEncrypted) {
+    const dec = CryptoService.decryptProfile(u.firstNameEncrypted);
+    if (dec) u.firstName = dec;
+  }
+  if (u.lastNameEncrypted) {
+    const dec = CryptoService.decryptProfile(u.lastNameEncrypted);
+    if (dec) u.lastName = dec;
+  }
+  if (u.emailEncrypted) {
+    const dec = CryptoService.decryptProfile(u.emailEncrypted);
+    if (dec) u.email = dec;
+  }
+  if (u.contactNumberEncrypted) {
+    const dec = CryptoService.decryptProfile(u.contactNumberEncrypted);
+    if (dec) u.contactNumber = dec;
+  }
+  if (u.bioEncrypted) {
+    const dec = CryptoService.decryptProfile(u.bioEncrypted);
+    if (dec) u.bio = dec;
+  }
+  if (u.restaurantNameEncrypted) {
+    const dec = CryptoService.decryptProfile(u.restaurantNameEncrypted);
+    if (dec) u.restaurantName = dec;
+  }
+  if (u.restaurantAddressEncrypted) {
+    const dec = CryptoService.decryptProfile(u.restaurantAddressEncrypted);
+    if (dec) u.restaurantAddress = dec;
+  }
+  if (u.vehicleTypeEncrypted) {
+    const dec = CryptoService.decryptProfile(u.vehicleTypeEncrypted);
+    if (dec) u.vehicleType = dec;
+  }
+
+  u.firstName = sanitizeField(u.firstName);
+  u.lastName = sanitizeField(u.lastName);
+  u.email = sanitizeField(u.email);
+  u.contactNumber = sanitizeField(u.contactNumber);
+  u.bio = sanitizeField(u.bio);
+  u.restaurantName = sanitizeField(u.restaurantName);
+  u.restaurantAddress = sanitizeField(u.restaurantAddress);
+  u.vehicleType = sanitizeField(u.vehicleType);
+
+  // Check dynamic users store fallback
+  const idStr = u._id ? String(u._id) : u.id ? String(u.id) : "";
+  if (idStr) {
+    try {
+      const dyn = findDynamicUserById(idStr);
+      if (dyn) {
+        if (!u.firstName) u.firstName = sanitizeField(dyn.firstName);
+        if (!u.lastName) u.lastName = sanitizeField(dyn.lastName);
+        if (!u.email) u.email = sanitizeField(dyn.email);
+        if (!u.contactNumber) u.contactNumber = sanitizeField(dyn.contactNumber);
+        if (!u.bio) u.bio = sanitizeField(dyn.bio);
+        if (!u.restaurantName) u.restaurantName = sanitizeField(dyn.restaurantName);
+        if (!u.restaurantAddress) u.restaurantAddress = sanitizeField(dyn.restaurantAddress);
+        if (!u.vehicleType) u.vehicleType = sanitizeField(dyn.vehicleType);
+      }
+    } catch {}
+  }
+
+  // Friendly name fallbacks based on role or email
+  if (!u.firstName && !u.lastName) {
+    if (u.email && u.email.includes("@")) {
+      const prefix = u.email.split("@")[0];
+      u.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
+      u.lastName = "";
+    } else {
+      switch (u.role) {
+        case "admin":
+          u.firstName = "Admin";
+          u.lastName = "User";
+          break;
+        case "restaurant":
+          u.firstName = "BiteRush";
+          u.lastName = "Restaurant";
+          break;
+        case "rider":
+          u.firstName = "Zayed";
+          u.lastName = "Masum";
+          break;
+        default:
+          u.firstName = "Customer";
+          u.lastName = idStr ? `#${idStr.slice(-4)}` : "";
+      }
+    }
+  }
+
+  if (u.role === "restaurant" && !u.restaurantName) {
+    u.restaurantName = `${u.firstName} ${u.lastName}`.trim() || "BiteRush Kitchen";
+  }
+
+  if (u.role === "rider" && !u.vehicleType) {
+    u.vehicleType = "Motorcycle";
+  }
+  if (u.role === "rider" && !u.contactNumber) {
+    u.contactNumber = "+8801700000003";
+  }
+
+  return u;
+}
+
+/**
  * Transparently decrypts all encrypted fields in an Order payload for authorized views:
  * - Customer / User details (RSA)
  * - Rider details (RSA)
@@ -38,106 +149,14 @@ export function decryptOrderPayload(orderDoc: any): any {
   // 1. Decrypt Customer / User (RSA)
   // ==========================================
   if (o.user && typeof o.user === "object") {
-    const u = { ...o.user };
-
-    if (u.firstNameEncrypted) {
-      const dec = CryptoService.decryptProfile(u.firstNameEncrypted);
-      if (dec) u.firstName = dec;
-    }
-    if (u.lastNameEncrypted) {
-      const dec = CryptoService.decryptProfile(u.lastNameEncrypted);
-      if (dec) u.lastName = dec;
-    }
-    if (u.emailEncrypted) {
-      const dec = CryptoService.decryptProfile(u.emailEncrypted);
-      if (dec) u.email = dec;
-    }
-    if (u.contactNumberEncrypted) {
-      const dec = CryptoService.decryptProfile(u.contactNumberEncrypted);
-      if (dec) u.contactNumber = dec;
-    }
-
-    u.firstName = sanitizeField(u.firstName);
-    u.lastName = sanitizeField(u.lastName);
-    u.email = sanitizeField(u.email);
-    u.contactNumber = sanitizeField(u.contactNumber);
-
-    // Dynamic user store fallback
-    if (u._id) {
-      try {
-        const dyn = findDynamicUserById(String(u._id));
-        if (dyn) {
-          if (!u.firstName) u.firstName = sanitizeField(dyn.firstName);
-          if (!u.lastName) u.lastName = sanitizeField(dyn.lastName);
-          if (!u.email) u.email = sanitizeField(dyn.email);
-          if (!u.contactNumber) u.contactNumber = sanitizeField(dyn.contactNumber);
-        }
-      } catch {}
-    }
-
-    // Clean human-friendly fallbacks if names are missing
-    if (!u.firstName && !u.lastName) {
-      if (u.email && u.email.includes("@")) {
-        const prefix = u.email.split("@")[0];
-        u.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-        u.lastName = "";
-      } else {
-        u.firstName = "Customer";
-        u.lastName = u._id ? `#${String(u._id).slice(-4)}` : "";
-      }
-    }
-
-    o.user = u;
+    o.user = decryptUserPayload(o.user);
   }
 
   // ==========================================
   // 2. Decrypt Rider (RSA)
   // ==========================================
   if (o.rider && typeof o.rider === "object") {
-    const r = { ...o.rider };
-
-    if (r.firstNameEncrypted) {
-      const dec = CryptoService.decryptProfile(r.firstNameEncrypted);
-      if (dec) r.firstName = dec;
-    }
-    if (r.lastNameEncrypted) {
-      const dec = CryptoService.decryptProfile(r.lastNameEncrypted);
-      if (dec) r.lastName = dec;
-    }
-    if (r.contactNumberEncrypted) {
-      const dec = CryptoService.decryptProfile(r.contactNumberEncrypted);
-      if (dec) r.contactNumber = dec;
-    }
-    if (r.vehicleTypeEncrypted) {
-      const dec = CryptoService.decryptProfile(r.vehicleTypeEncrypted);
-      if (dec) r.vehicleType = dec;
-    }
-
-    r.firstName = sanitizeField(r.firstName);
-    r.lastName = sanitizeField(r.lastName);
-    r.contactNumber = sanitizeField(r.contactNumber);
-    r.vehicleType = sanitizeField(r.vehicleType);
-
-    if (r._id) {
-      try {
-        const dyn = findDynamicUserById(String(r._id));
-        if (dyn) {
-          if (!r.firstName) r.firstName = sanitizeField(dyn.firstName);
-          if (!r.lastName) r.lastName = sanitizeField(dyn.lastName);
-          if (!r.contactNumber) r.contactNumber = sanitizeField(dyn.contactNumber);
-          if (!r.vehicleType) r.vehicleType = sanitizeField(dyn.vehicleType);
-        }
-      } catch {}
-    }
-
-    if (!r.firstName && !r.lastName) {
-      r.firstName = "Zayed";
-      r.lastName = "Masum";
-      if (!r.contactNumber) r.contactNumber = "+8801700000003";
-      if (!r.vehicleType) r.vehicleType = "Motorcycle";
-    }
-
-    o.rider = r;
+    o.rider = decryptUserPayload({ role: "rider", ...o.rider });
   }
 
   // ==========================================

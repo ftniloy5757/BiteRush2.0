@@ -33,6 +33,26 @@ interface UserProfile {
   isPhoneVerified: boolean;
   isEmailVerified: boolean;
   savedAddresses?: SavedAddress[];
+  role?: string;
+  restaurantName?: string;
+  restaurantAddress?: string;
+  vehicleType?: string;
+}
+
+function cleanString(val?: string | null): string {
+  if (!val || typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.includes("RSA-1024") ||
+    trimmed.includes("ECC-SECP256K1") ||
+    trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+    trimmed === "undefined" ||
+    trimmed === "null"
+  ) {
+    return "";
+  }
+  return trimmed;
 }
 
 export default function EditProfilePage() {
@@ -49,6 +69,9 @@ export default function EditProfilePage() {
     contactNumber: "",
     themePreference: "light",
     status: "Online",
+    restaurantName: "",
+    restaurantAddress: "",
+    vehicleType: "",
   });
 
   const [addresses, setAddresses] = useState<SavedAddress[]>([]);
@@ -73,12 +96,15 @@ export default function EditProfilePage() {
         const data = await response.json();
         setProfile(data);
         setFormData({
-          firstName: data.firstName || "",
-          lastName: data.lastName || "",
-          bio: data.bio || "",
-          contactNumber: data.contactNumber || "",
+          firstName: cleanString(data.firstName),
+          lastName: cleanString(data.lastName),
+          bio: cleanString(data.bio),
+          contactNumber: cleanString(data.contactNumber),
           themePreference: data.themePreference || "light",
           status: data.status || "Online",
+          restaurantName: cleanString(data.restaurantName),
+          restaurantAddress: cleanString(data.restaurantAddress),
+          vehicleType: cleanString(data.vehicleType),
         });
 
         if (data.savedAddresses && Array.isArray(data.savedAddresses)) {
@@ -371,6 +397,58 @@ export default function EditProfilePage() {
               className="w-full px-3.5 py-2.5 bg-gray-50 dark:bg-gray-800/70 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-orange-500 focus:outline-none transition-colors"
             ></textarea>
           </div>
+
+          {/* Restaurant Specific Fields */}
+          {profile?.role === "restaurant" && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-900/40">
+              <div>
+                <label className="block text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                  Restaurant Brand Name
+                </label>
+                <input
+                  type="text"
+                  name="restaurantName"
+                  value={formData.restaurantName}
+                  onChange={handleChange}
+                  placeholder="e.g. Sultan's Dine"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-emerald-800 dark:text-emerald-300 mb-1">
+                  Kitchen Address
+                </label>
+                <input
+                  type="text"
+                  name="restaurantAddress"
+                  value={formData.restaurantAddress}
+                  onChange={handleChange}
+                  placeholder="e.g. Dhanmondi 27, Dhaka"
+                  className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-emerald-500 focus:outline-none transition-colors"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* Rider Specific Fields */}
+          {profile?.role === "rider" && (
+            <div className="p-4 rounded-2xl bg-violet-50/60 dark:bg-violet-950/20 border border-violet-200 dark:border-violet-900/40">
+              <label className="block text-xs font-semibold text-violet-800 dark:text-violet-300 mb-1">
+                Assigned Delivery Vehicle
+              </label>
+              <select
+                name="vehicleType"
+                value={formData.vehicleType || "Motorcycle"}
+                onChange={handleChange}
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-violet-500 focus:outline-none transition-colors"
+              >
+                <option value="Motorcycle">Motorcycle</option>
+                <option value="Bicycle">Bicycle</option>
+                <option value="Scooter">Electric Scooter</option>
+                <option value="Car">Car</option>
+              </select>
+            </div>
+          )}
 
           {/* Preferences */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

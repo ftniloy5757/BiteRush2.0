@@ -108,36 +108,19 @@ export const authOptions: NextAuthOptions = {
                     }
                   );
 
-                  // Transparently decrypt RSA-encrypted profile fields for the active session
-                  const decryptedFirstName = user.firstNameEncrypted
-                    ? CryptoService.decryptProfile(user.firstNameEncrypted)
-                    : user.firstName;
-                  const decryptedLastName = user.lastNameEncrypted
-                    ? CryptoService.decryptProfile(user.lastNameEncrypted)
-                    : user.lastName;
-                  const decryptedEmail = user.emailEncrypted
-                    ? CryptoService.decryptProfile(user.emailEncrypted)
-                    : user.email;
-                  const decryptedContact = user.contactNumberEncrypted
-                    ? CryptoService.decryptProfile(user.contactNumberEncrypted)
-                    : user.contactNumber || "";
-                  const decryptedRestaurant = user.restaurantNameEncrypted
-                    ? CryptoService.decryptProfile(user.restaurantNameEncrypted)
-                    : user.restaurantName || "";
-                  const decryptedVehicle = user.vehicleTypeEncrypted
-                    ? CryptoService.decryptProfile(user.vehicleTypeEncrypted)
-                    : user.vehicleType || "";
+                  const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+                  const decrypted = decryptUserPayload(user);
 
                   return {
                     id: user._id.toString(),
-                    firstName: decryptedFirstName,
-                    lastName: decryptedLastName,
-                    contactNumber: decryptedContact,
-                    email: decryptedEmail,
+                    firstName: decrypted.firstName,
+                    lastName: decrypted.lastName,
+                    contactNumber: decrypted.contactNumber,
+                    email: decrypted.email || normalizedEmail,
                     isEmailVerified: user.isEmailVerified !== false,
                     role: user.role || "customer",
-                    restaurantName: decryptedRestaurant,
-                    vehicleType: decryptedVehicle,
+                    restaurantName: decrypted.restaurantName,
+                    vehicleType: decrypted.vehicleType,
                   };
                 }
               }
@@ -204,16 +187,19 @@ export const authOptions: NextAuthOptions = {
                     console.warn("Sync dynamic user to MongoDB notice:", syncErr);
                   }
 
+                  const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+                  const decryptedDyn = decryptUserPayload(dynamicUser);
+
                   return {
                     id: dynamicUser._id,
-                    firstName: dynamicUser.firstName || "Customer",
-                    lastName: dynamicUser.lastName || "",
-                    contactNumber: dynamicUser.contactNumber || "",
-                    email: dynamicUser.email,
+                    firstName: decryptedDyn.firstName || "Customer",
+                    lastName: decryptedDyn.lastName || "",
+                    contactNumber: decryptedDyn.contactNumber || "",
+                    email: decryptedDyn.email || normalizedEmail,
                     isEmailVerified: true,
                     role: dynamicUser.role || "customer",
-                    restaurantName: dynamicUser.restaurantName,
-                    vehicleType: dynamicUser.vehicleType,
+                    restaurantName: decryptedDyn.restaurantName,
+                    vehicleType: decryptedDyn.vehicleType,
                   };
                 }
               }
@@ -324,16 +310,24 @@ export const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
+        const { sanitizeField } = await import("@/lib/crypto/orderDecryptor");
+        const cleanFirst = sanitizeField(token.firstName);
+        const cleanLast = sanitizeField(token.lastName);
+        const cleanEmail = sanitizeField(token.email) || (token.email as string);
+        const cleanContact = sanitizeField(token.contactNumber) || (token.contactNumber as string);
+        const cleanRestaurant = sanitizeField(token.restaurantName) || (token.restaurantName as string);
+        const cleanVehicle = sanitizeField(token.vehicleType) || (token.vehicleType as string);
+
         session.user.id = token.id as string;
-        session.user.firstName = token.firstName as string;
-        session.user.lastName = token.lastName as string;
-        session.user.email = token.email as string;
+        session.user.firstName = cleanFirst || (token.role === "rider" ? "Zayed" : token.role === "restaurant" ? "BiteRush" : token.role === "admin" ? "Admin" : "Customer");
+        session.user.lastName = cleanLast;
+        session.user.email = cleanEmail;
         session.user.isEmailVerified = token.isEmailVerified as boolean;
-        session.user.contactNumber = token.contactNumber as string;
+        session.user.contactNumber = cleanContact;
         session.user.role = token.role as "customer" | "restaurant" | "rider" | "admin";
         session.user.profilePicture = token.profilePicture as string;
-        session.user.restaurantName = token.restaurantName as string;
-        session.user.vehicleType = token.vehicleType as string;
+        session.user.restaurantName = cleanRestaurant;
+        session.user.vehicleType = cleanVehicle;
       }
       return session;
     },

@@ -13,22 +13,27 @@ export async function GET(request: Request) {
   try {
     await connectDB();
 
-    // Create a regex search pattern for case-insensitive search
-    const searchPattern = new RegExp(query, "i");
-
-    const users = await User.find({
-      $or: [{ firstName: searchPattern }, { lastName: searchPattern }],
-    })
-      .select("firstName lastName")
-      .limit(10)
+    const candidates = await User.find({})
+      .select("firstName lastName firstNameEncrypted lastNameEncrypted email emailEncrypted")
+      .limit(50)
       .lean();
 
-    // Format the results
-    const formattedUsers = users.map((user) => ({
-      id: (user as any)._id.toString(),
-      firstName: user.firstName,
-      lastName: user.lastName,
-    }));
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+    const qLower = query.toLowerCase().trim();
+
+    const formattedUsers = candidates
+      .map((u) => decryptUserPayload(u))
+      .filter((u) => {
+        const full = `${u.firstName || ""} ${u.lastName || ""}`.toLowerCase();
+        const email = (u.email || "").toLowerCase();
+        return full.includes(qLower) || email.includes(qLower);
+      })
+      .slice(0, 10)
+      .map((u) => ({
+        id: (u._id || u.id).toString(),
+        firstName: u.firstName,
+        lastName: u.lastName,
+      }));
 
     return NextResponse.json({ users: formattedUsers });
   } catch (error) {

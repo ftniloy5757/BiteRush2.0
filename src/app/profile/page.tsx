@@ -3,7 +3,22 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import Image from "next/image";
-import { Utensils, MapPin, Phone, Mail, Calendar, Edit, Plus, Home, Briefcase, CheckCircle } from "lucide-react";
+import {
+  Utensils,
+  MapPin,
+  Phone,
+  Mail,
+  Calendar,
+  Edit,
+  Plus,
+  Home,
+  Briefcase,
+  CheckCircle,
+  ChefHat,
+  Bike,
+  Shield,
+  Store,
+} from "lucide-react";
 import Link from "next/link";
 
 interface SavedAddress {
@@ -29,8 +44,31 @@ interface UserProfile {
   isPhoneVerified: boolean;
   isEmailVerified: boolean;
   savedAddresses?: SavedAddress[];
+  role?: string;
+  restaurantName?: string | null;
+  restaurantAddress?: string | null;
+  vehicleType?: string | null;
   createdAt: string | null;
   updatedAt: string | null;
+}
+
+/**
+ * Sanitizes any raw ciphertext envelopes, algorithmic tags, or literal "[ENCRYPTED]" placeholders
+ */
+function cleanString(val?: string | null): string {
+  if (!val || typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.includes("RSA-1024") ||
+    trimmed.includes("ECC-SECP256K1") ||
+    trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+    trimmed === "undefined" ||
+    trimmed === "null"
+  ) {
+    return "";
+  }
+  return trimmed;
 }
 
 export default function ProfilePage() {
@@ -49,19 +87,22 @@ export default function ProfilePage() {
         setUser(data);
       } catch (err: any) {
         console.warn("Profile fetch failed, using fallback:", err);
-        // Resilient fallback so page never breaks (Problem-04)
+        // Resilient fallback so page never breaks
         const isDemo = session?.user?.email?.toLowerCase() === "customer@biterush.com";
         if (session?.user) {
           setUser({
             id: session.user.id || "current-user",
-            firstName: session.user.firstName || "Customer",
-            lastName: session.user.lastName || "",
-            email: session.user.email || "",
-            contactNumber: session.user.contactNumber || (isDemo ? "+8801740734780" : ""),
+            firstName: cleanString(session.user.firstName) || "User",
+            lastName: cleanString(session.user.lastName) || "",
+            email: cleanString(session.user.email) || "",
+            contactNumber: cleanString(session.user.contactNumber) || (isDemo ? "+8801740734780" : ""),
             bio: isDemo ? "Food enthusiast & BiteRush member" : "",
             profilePicture: session.user.profilePicture || null,
             themePreference: "light",
             status: "Online",
+            role: session.user.role || "customer",
+            restaurantName: cleanString(session.user.restaurantName) || null,
+            vehicleType: cleanString(session.user.vehicleType) || null,
             isPhoneVerified: true,
             isEmailVerified: true,
             savedAddresses: isDemo
@@ -131,25 +172,77 @@ export default function ProfilePage() {
     );
   }
 
+  const role = (user?.role || session?.user?.role || "customer").toLowerCase();
+
+  const safeFirstName =
+    cleanString(user?.firstName) ||
+    cleanString(session?.user?.firstName) ||
+    (role === "restaurant" ? cleanString(user?.restaurantName) : "") ||
+    (user?.email && user.email.includes("@") ? user.email.split("@")[0] : "") ||
+    (role.charAt(0).toUpperCase() + role.slice(1));
+  const safeLastName = cleanString(user?.lastName) || cleanString(session?.user?.lastName);
+  const safeEmail = cleanString(user?.email) || cleanString(session?.user?.email);
+  const safeContact = cleanString(user?.contactNumber) || cleanString(session?.user?.contactNumber);
+  const safeBio = cleanString(user?.bio);
+  const safeRestaurantName = cleanString(user?.restaurantName) || cleanString(session?.user?.restaurantName);
+  const safeRestaurantAddress = cleanString(user?.restaurantAddress);
+  const safeVehicleType = cleanString(user?.vehicleType) || cleanString(session?.user?.vehicleType);
+
   const addresses = Array.isArray(user?.savedAddresses) ? user.savedAddresses : [];
+
+  // Header meta based on role
+  const getHeaderMeta = () => {
+    switch (role) {
+      case "admin":
+        return {
+          title: "Administrator Profile",
+          subtitle: "Administrative credentials, platform oversight & security permissions",
+          icon: <Shield className="h-7 w-7 text-white" />,
+          gradient: "from-red-600 via-rose-600 to-orange-600",
+        };
+      case "restaurant":
+        return {
+          title: "Restaurant Profile",
+          subtitle: "Manage restaurant identity, kitchen details & operational contact",
+          icon: <ChefHat className="h-7 w-7 text-white" />,
+          gradient: "from-emerald-600 via-teal-600 to-cyan-700",
+        };
+      case "rider":
+        return {
+          title: "Rider Profile",
+          subtitle: "Courier credentials, delivery vehicle & dispatch status",
+          icon: <Bike className="h-7 w-7 text-white" />,
+          gradient: "from-violet-600 via-purple-600 to-indigo-700",
+        };
+      default:
+        return {
+          title: "Customer Profile",
+          subtitle: "Manage your details & saved delivery locations",
+          icon: <Utensils className="h-7 w-7 text-white" />,
+          gradient: "from-orange-500 via-amber-500 to-amber-600",
+        };
+    }
+  };
+
+  const headerMeta = getHeaderMeta();
 
   return (
     <div className="min-h-screen bg-orange-50/60 dark:bg-gray-950 py-12 px-4 transition-colors duration-200">
       <div className="max-w-3xl mx-auto">
         {/* Profile Header */}
-        <div className="bg-gradient-to-r from-orange-500 via-amber-500 to-amber-600 rounded-t-3xl p-6 md:p-8 text-white flex items-center justify-between shadow-lg">
+        <div className={`bg-gradient-to-r ${headerMeta.gradient} rounded-t-3xl p-6 md:p-8 text-white flex items-center justify-between shadow-lg`}>
           <div className="flex items-center gap-3">
             <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl">
-              <Utensils className="h-7 w-7 text-white" />
+              {headerMeta.icon}
             </div>
             <div>
-              <h1 className="text-2xl font-bold tracking-tight">Customer Profile</h1>
-              <p className="text-orange-100 text-sm">Manage your details & saved delivery locations</p>
+              <h1 className="text-2xl font-bold tracking-tight">{headerMeta.title}</h1>
+              <p className="text-white/90 text-sm">{headerMeta.subtitle}</p>
             </div>
           </div>
           <Link
             href="/profile/edit"
-            className="flex items-center gap-2 bg-white text-orange-600 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-orange-50 transition-colors"
+            className="flex items-center gap-2 bg-white text-gray-900 font-semibold px-4 py-2.5 rounded-xl shadow-sm hover:bg-gray-100 transition-colors"
           >
             <Edit className="h-4 w-4" />
             Edit Profile
@@ -172,8 +265,8 @@ export default function ProfilePage() {
                 ) : (
                   <div className="w-full h-full flex items-center justify-center text-orange-600 dark:text-orange-400">
                     <span className="text-3xl font-extrabold">
-                      {user?.firstName?.charAt(0) || "U"}
-                      {user?.lastName?.charAt(0) || ""}
+                      {safeFirstName.charAt(0).toUpperCase()}
+                      {safeLastName ? safeLastName.charAt(0).toUpperCase() : ""}
                     </span>
                   </div>
                 )}
@@ -183,13 +276,13 @@ export default function ProfilePage() {
             {/* User Details */}
             <div className="flex-grow text-center sm:text-left">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-                {user?.firstName} {user?.lastName}
+                {safeFirstName} {safeLastName}
               </h2>
 
               <div className="text-gray-600 dark:text-gray-400 mt-2 mb-4 flex flex-wrap items-center justify-center sm:justify-start gap-2">
                 <span
                   className={`inline-flex items-center px-3 py-0.5 rounded-full text-xs font-semibold ${
-                    user?.status === "Online"
+                    user?.status === "Online" || !user?.status
                       ? "bg-green-100 dark:bg-green-950/50 text-green-700 dark:text-green-400"
                       : user?.status === "Busy"
                       ? "bg-red-100 dark:bg-red-950/50 text-red-700 dark:text-red-400"
@@ -201,14 +294,20 @@ export default function ProfilePage() {
 
                 <span className="text-gray-300 dark:text-gray-700">•</span>
 
+                <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
+                  {role}
+                </span>
+
+                <span className="text-gray-300 dark:text-gray-700">•</span>
+
                 <span className="inline-flex items-center px-3 py-0.5 rounded-full text-xs font-medium bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300">
                   {user?.themePreference === "dark" ? "Dark Theme" : "Light Theme"}
                 </span>
               </div>
 
-              {user?.bio ? (
+              {safeBio ? (
                 <p className="text-gray-600 dark:text-gray-300 text-sm border-l-4 border-orange-400 dark:border-orange-500 pl-3 italic">
-                  &ldquo;{user.bio}&rdquo;
+                  &ldquo;{safeBio}&rdquo;
                 </p>
               ) : (
                 <p className="text-gray-400 dark:text-gray-500 text-xs italic">
@@ -220,6 +319,78 @@ export default function ProfilePage() {
               )}
             </div>
           </div>
+
+          {/* Role-Specific Information */}
+          {role === "restaurant" && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Store className="h-5 w-5 text-emerald-500" />
+                Restaurant Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Restaurant Brand Name</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                    {safeRestaurantName || `${safeFirstName} Kitchen`}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Kitchen Address</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                    {safeRestaurantAddress || "Dhanmondi, Dhaka, Bangladesh"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {role === "rider" && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Bike className="h-5 w-5 text-violet-500" />
+                Courier & Vehicle Details
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Delivery Vehicle Type</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white mt-1">
+                    {safeVehicleType || "Motorcycle"}
+                  </p>
+                </div>
+                <div className="p-3.5 bg-gray-50 dark:bg-gray-800/60 rounded-xl border border-gray-100 dark:border-gray-800">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Delivery Fleet Status</p>
+                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1.5">
+                    <CheckCircle className="h-4 w-4" /> Ready for Dispatches
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {role === "admin" && (
+            <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
+                <Shield className="h-5 w-5 text-red-500" />
+                Administrator Privileges
+              </h3>
+              <div className="p-4 bg-red-50/50 dark:bg-red-950/20 rounded-2xl border border-red-200 dark:border-red-900/50 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-bold text-red-600 dark:text-red-400 uppercase tracking-wide">
+                    Full Platform Access & Decryption
+                  </p>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 mt-1">
+                    Authorized to inspect user accounts, manage menu inventory, review system logs, and decrypt order records.
+                  </p>
+                </div>
+                <Link
+                  href="/admin"
+                  className="text-xs font-bold bg-red-600 hover:bg-red-700 text-white px-4 py-2.5 rounded-xl transition-colors shadow-sm shrink-0 inline-block text-center"
+                >
+                  Admin Portal →
+                </Link>
+              </div>
+            </div>
+          )}
 
           {/* Contact Information */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
@@ -234,7 +405,7 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Email Address</p>
-                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{user?.email}</p>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">{safeEmail || "—"}</p>
                   <span className="text-[11px] font-medium text-green-600 dark:text-green-400">
                     ✓ Verified
                   </span>
@@ -247,10 +418,10 @@ export default function ProfilePage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Contact Number</p>
-                  {user?.contactNumber ? (
+                  {safeContact ? (
                     <>
                       <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                        {user.contactNumber}
+                        {safeContact}
                       </p>
                       <span className="text-[11px] font-medium text-green-600 dark:text-green-400">
                         ✓ Active Contact
@@ -274,7 +445,7 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {/* Saved Delivery Addresses (Problem-08) */}
+          {/* Saved Delivery Addresses (For Customers or general delivery usage) */}
           <div className="border-t border-gray-100 dark:border-gray-800 pt-6">
             <div className="flex items-center justify-between mb-4">
               <div>
@@ -363,10 +534,10 @@ export default function ProfilePage() {
               </span>
             </div>
             <Link
-              href="/orders"
+              href={role === "admin" ? "/admin/orders" : role === "restaurant" ? "/restaurant/orders" : role === "rider" ? "/rider/deliveries" : "/orders"}
               className="text-orange-600 dark:text-orange-400 font-semibold hover:underline"
             >
-              View Order History →
+              {role === "rider" ? "View Delivery Tasks →" : "View Order History →"}
             </Link>
           </div>
         </div>

@@ -32,16 +32,40 @@ import { ModeToggle } from "./theme-toggle";
 export default function Navbar() {
   const { data: session } = useSession();
 
+  const cleanField = (s?: string | null) => {
+    if (!s || typeof s !== "string") return "";
+    const trimmed = s.trim();
+    if (
+      trimmed.startsWith("{") ||
+      trimmed.includes("RSA-1024") ||
+      trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+      trimmed === "undefined" ||
+      trimmed === "null"
+    ) {
+      return "";
+    }
+    return trimmed;
+  };
+
+  const safeFirstName =
+    cleanField(session?.user?.firstName) ||
+    cleanField(session?.user?.restaurantName) ||
+    (session?.user?.email && session.user.email.includes("@")
+      ? session.user.email.split("@")[0].charAt(0).toUpperCase() + session.user.email.split("@")[0].slice(1)
+      : "") ||
+    (session?.user?.role ? session.user.role.charAt(0).toUpperCase() + session.user.role.slice(1) : "User");
+
+  const safeLastName = cleanField(session?.user?.lastName);
+  const safeEmail = cleanField(session?.user?.email);
+
   // Get user initials for avatar fallback
   const getUserInitials = () => {
-    if (!session?.user?.firstName) return "U";
-    return `${session.user.firstName[0]}${
-      session.user.lastName ? session.user.lastName[0] : ""
-    }`.toUpperCase();
+    if (!safeFirstName) return "U";
+    return `${safeFirstName[0]}${safeLastName ? safeLastName[0] : ""}`.toUpperCase();
   };
 
   const fullName = session?.user
-    ? `${session.user.firstName || ""} ${session.user.lastName || ""}`.trim()
+    ? `${safeFirstName} ${safeLastName}`.trim()
     : "User";
 
   const userRole = session?.user?.role || "customer";
@@ -251,7 +275,7 @@ export default function Navbar() {
                   </Avatar>
                   <div className="hidden sm:block text-left pr-2">
                     <span className="text-xs font-bold block leading-tight truncate max-w-[100px]">
-                      {session.user.firstName || "User"}
+                      {safeFirstName}
                     </span>
                     {getRoleBadge()}
                   </div>
@@ -269,7 +293,7 @@ export default function Navbar() {
                     </span>
                     {getRoleBadge()}
                   </div>
-                  <p className="text-[11px] text-gray-400 truncate">{session.user.email}</p>
+                  <p className="text-[11px] text-gray-400 truncate">{safeEmail}</p>
                 </div>
 
                 <DropdownMenuSeparator />

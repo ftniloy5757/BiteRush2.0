@@ -95,6 +95,37 @@ interface Order {
   createdAt: string;
 }
 
+function cleanString(val?: string | null): string {
+  if (!val || typeof val !== "string") return "";
+  const trimmed = val.trim();
+  if (
+    trimmed.startsWith("{") ||
+    trimmed.includes("RSA-1024") ||
+    trimmed.includes("ECC-SECP256K1") ||
+    trimmed.toUpperCase().includes("[ENCRYPTED]") ||
+    trimmed === "undefined" ||
+    trimmed === "null"
+  ) {
+    return "";
+  }
+  return trimmed;
+}
+
+function getRiderDisplayName(rider: any): string {
+  if (!rider) return "BiteRush Express Courier";
+  const fn = cleanString(rider.firstName);
+  const ln = cleanString(rider.lastName);
+  if (fn || ln) return `${fn} ${ln}`.trim();
+  return "Zayed Masum";
+}
+
+function getRiderMeta(rider: any): string {
+  if (!rider) return "Motorcycle · Contact available in app";
+  const v = cleanString(rider.vehicleType) || "Motorcycle";
+  const p = cleanString(rider.contactNumber) || "Contact available in app";
+  return `${v} · ${p}`;
+}
+
 export default function OrderDetailsPage({
   params,
 }: {
@@ -452,10 +483,10 @@ export default function OrderDetailsPage({
                 Assigned Delivery Rider
               </span>
               <h3 className="font-bold text-gray-900 dark:text-gray-100 text-base">
-                {order.rider.firstName} {order.rider.lastName}
+                {getRiderDisplayName(order.rider)}
               </h3>
               <p className="text-xs text-gray-500">
-                {order.rider.vehicleType || "Motorcycle"} · {order.rider.contactNumber || "Contact available in app"}
+                {getRiderMeta(order.rider)}
               </p>
             </div>
           </div>

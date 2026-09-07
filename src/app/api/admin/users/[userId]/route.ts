@@ -42,80 +42,8 @@ export async function GET(req: NextRequest, context: any) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const userObj = user.toObject();
-    try {
-      const { CryptoService } = await import("@/lib/crypto/cryptoService");
-      const sanitizeField = (val: any) => {
-        if (!val || typeof val !== "string") return "";
-        const trimmed = val.trim();
-        if (
-          trimmed.startsWith("{") ||
-          trimmed.includes("RSA-1024") ||
-          trimmed.toUpperCase().includes("[ENCRYPTED]") ||
-          trimmed === "undefined" ||
-          trimmed === "null"
-        ) {
-          return "";
-        }
-        return trimmed;
-      };
-
-      if (user.firstNameEncrypted) {
-        userObj.firstName = CryptoService.decryptProfile(user.firstNameEncrypted);
-      }
-      if (user.lastNameEncrypted) {
-        userObj.lastName = CryptoService.decryptProfile(user.lastNameEncrypted);
-      }
-      if (user.emailEncrypted) {
-        const decryptedEmail = CryptoService.decryptProfile(user.emailEncrypted);
-        if (decryptedEmail && !decryptedEmail.startsWith("{")) {
-          userObj.email = decryptedEmail;
-        }
-      }
-      if (user.contactNumberEncrypted) {
-        userObj.contactNumber = CryptoService.decryptProfile(user.contactNumberEncrypted);
-      }
-      if (user.restaurantNameEncrypted) {
-        userObj.restaurantName = CryptoService.decryptProfile(user.restaurantNameEncrypted);
-      }
-      if (user.restaurantAddressEncrypted) {
-        userObj.restaurantAddress = CryptoService.decryptProfile(user.restaurantAddressEncrypted);
-      }
-      if (user.vehicleTypeEncrypted) {
-        userObj.vehicleType = CryptoService.decryptProfile(user.vehicleTypeEncrypted);
-      }
-
-      userObj.firstName = sanitizeField(userObj.firstName);
-      userObj.lastName = sanitizeField(userObj.lastName);
-      userObj.email = sanitizeField(userObj.email);
-      userObj.contactNumber = sanitizeField(userObj.contactNumber);
-      userObj.restaurantName = sanitizeField(userObj.restaurantName);
-      userObj.restaurantAddress = sanitizeField(userObj.restaurantAddress);
-      userObj.vehicleType = sanitizeField(userObj.vehicleType);
-
-      try {
-        const { findDynamicUserById } = await import("@/lib/dynamicUsersStore");
-        const dyn = findDynamicUserById(String(userObj._id));
-        if (dyn) {
-          if (!userObj.firstName) userObj.firstName = sanitizeField(dyn.firstName);
-          if (!userObj.lastName) userObj.lastName = sanitizeField(dyn.lastName);
-          if (!userObj.email) userObj.email = sanitizeField(dyn.email);
-          if (!userObj.contactNumber) userObj.contactNumber = sanitizeField(dyn.contactNumber);
-        }
-      } catch {}
-
-      if (!userObj.firstName && !userObj.lastName) {
-        if (userObj.email) {
-          const prefix = userObj.email.split("@")[0];
-          userObj.firstName = prefix.charAt(0).toUpperCase() + prefix.slice(1);
-          userObj.lastName = "";
-        } else {
-          userObj.firstName = (userObj.role ? userObj.role.charAt(0).toUpperCase() + userObj.role.slice(1) : "Customer");
-          userObj.lastName = `#${String(userObj._id).slice(-4)}`;
-        }
-      }
-    } catch {}
-
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+    const userObj = decryptUserPayload(user);
     return NextResponse.json(userObj);
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });
@@ -275,29 +203,9 @@ export async function PATCH(req: NextRequest, context: any) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const userObj = updatedUser.toObject();
+    const { decryptUserPayload } = await import("@/lib/crypto/orderDecryptor");
+    const userObj = decryptUserPayload(updatedUser);
     try {
-      if (updatedUser.firstNameEncrypted) {
-        userObj.firstName = CryptoService.decryptProfile(updatedUser.firstNameEncrypted);
-      }
-      if (updatedUser.lastNameEncrypted) {
-        userObj.lastName = CryptoService.decryptProfile(updatedUser.lastNameEncrypted);
-      }
-      if (updatedUser.emailEncrypted) {
-        userObj.email = CryptoService.decryptProfile(updatedUser.emailEncrypted);
-      }
-      if (updatedUser.contactNumberEncrypted) {
-        userObj.contactNumber = CryptoService.decryptProfile(updatedUser.contactNumberEncrypted);
-      }
-      if (updatedUser.restaurantNameEncrypted) {
-        userObj.restaurantName = CryptoService.decryptProfile(updatedUser.restaurantNameEncrypted);
-      }
-      if (updatedUser.restaurantAddressEncrypted) {
-        userObj.restaurantAddress = CryptoService.decryptProfile(updatedUser.restaurantAddressEncrypted);
-      }
-      if (updatedUser.vehicleTypeEncrypted) {
-        userObj.vehicleType = CryptoService.decryptProfile(updatedUser.vehicleTypeEncrypted);
-      }
       // Mirror to dynamic store
       const { updateDynamicUser } = await import("@/lib/dynamicUsersStore");
       updateDynamicUser(userId, userObj);
